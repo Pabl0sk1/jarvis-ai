@@ -20,6 +20,8 @@ TECLAS = {
     "fuente": "KEY_SOURCE", "hdmi": "KEY_HDMI", "reproducir": "KEY_PLAY", "pausa": "KEY_PAUSE",
 }
 ACCIONES = ["encender", "apagar", *TECLAS]
+NO_RESPONDE = ("La tele no responde: está apagada o este equipo no está conectado a la "
+               "red de casa (COMMON).")
 # Por si la tele no devuelve la lista de apps instaladas
 APPS_CONOCIDAS = {"youtube": "111299001912", "netflix": "11101200001",
                   "prime video": "3201512006785", "spotify": "3201606009684"}
@@ -52,7 +54,7 @@ class Tele:
         if accion == "encender":
             return self._encender()
         if not self.encendida():
-            return "La tele está apagada."
+            return NO_RESPONDE
         if accion == "apagar":
             self._pulsar("KEY_POWER")
             return "Tele apagada."
@@ -64,7 +66,7 @@ class Tele:
 
     def apps(self) -> str:
         if not self.encendida():
-            return "La tele está apagada."
+            return NO_RESPONDE
         tele = self._conectar()
         try:
             instaladas = tele.app_list() or []
@@ -74,7 +76,7 @@ class Tele:
 
     def abrir_app(self, app: str) -> str:
         if not self.encendida():
-            return "La tele está apagada; hay que encenderla primero."
+            return NO_RESPONDE + " Si está apagada, hay que encenderla primero."
         buscada = app.lower().strip()
         tele = self._conectar()
         try:
