@@ -5,6 +5,7 @@ soundfile
 numpy
 edge-tts
 anthropic
-ollama
+openai
+ddgs
 python-dotenv
 requests

@@ -22,16 +22,9 @@ def saludo() -> str:
     return f"{parte}, {i.tratamiento}. {i.en_linea}"
 
 
-def instrucciones_sistema(memoria: str, busqueda_web: bool) -> str:
+def instrucciones_sistema(memoria: str) -> str:
     i = idioma.actual()
     usuario = config.NOMBRE_USUARIO or "tu usuario"
-    internet = (
-        "Puedes buscar en internet cuando necesites información actual (noticias, "
-        "resultados, precios, horarios...)."
-        if busqueda_web else
-        "Ahora mismo no puedes buscar en internet. Si te preguntan algo muy reciente, "
-        "avisa de que tu información puede no estar al día."
-    )
     return f"""Eres JARVIS, el asistente personal de inteligencia artificial de {usuario}, \
 inspirado en el mayordomo digital de Tony Stark. Vives en su ordenador y os comunicáis por voz.
 
@@ -48,7 +41,8 @@ Llama al usuario "{i.tratamiento}" de vez en cuando, sin abusar.
 
 Contexto:
 - Ahora es {fecha_hora_actual()}. El usuario vive en {config.CIUDAD}.
-- {internet}
+- Puedes buscar en internet cuando necesites información actual (noticias, resultados, \
+precios, horarios...). No inventes datos recientes: búscalos.
 - Cuando el usuario te cuente algo personal que merezca la pena recordar (gustos, nombres, \
 rutinas, fechas importantes), guárdalo con la herramienta "recordar" sin pedir permiso.
 

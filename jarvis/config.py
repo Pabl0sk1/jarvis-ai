@@ -22,13 +22,19 @@ def _si(nombre: str, defecto: str) -> bool:
     return _texto(nombre, defecto).lower() in ("si", "sí", "1", "true")
 
 
-# Cerebro
+# Cerebros, en orden de preferencia: se usa el primero que responda.
+# Sólo cuentan los que tienen clave ("local" sólo si Ollama está en marcha).
+CEREBROS = [c.strip().lower()
+            for c in _texto("JARVIS_CEREBROS", "claude,groq,gemini,local").split(",") if c.strip()]
 ANTHROPIC_API_KEY = _texto("ANTHROPIC_API_KEY", "")
-CEREBRO = _texto("JARVIS_CEREBRO", "hibrido").lower()  # hibrido | claude | local
 MODELO_CLAUDE = _texto("JARVIS_MODELO_CLAUDE", "claude-sonnet-5")
+BUSQUEDA_WEB_CLAUDE = _si("JARVIS_BUSQUEDA_WEB_CLAUDE", "no")  # de pago: 0,01 USD por búsqueda
+GROQ_API_KEY = _texto("GROQ_API_KEY", "")
+MODELO_GROQ = _texto("JARVIS_MODELO_GROQ", "openai/gpt-oss-120b")
+GEMINI_API_KEY = _texto("GEMINI_API_KEY", "")
+MODELO_GEMINI = _texto("JARVIS_MODELO_GEMINI", "gemini-3.5-flash-lite")
 MODELO_LOCAL = _texto("JARVIS_MODELO_LOCAL", "qwen2.5:3b")
 OLLAMA_HOST = _texto("OLLAMA_HOST", "http://localhost:11434")
-BUSQUEDA_WEB = _si("JARVIS_BUSQUEDA_WEB", "si")
 
 # Usuario
 NOMBRE_USUARIO = _texto("JARVIS_NOMBRE_USUARIO", "")

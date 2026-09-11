@@ -44,7 +44,7 @@ IDIOMAS = {
         despedidas=frozenset({"eso es todo", "nada mas", "nada", "gracias eso es todo",
                               "adios", "hasta luego"}),
         sin_cerebro="Lo siento, {t}, ahora mismo no tengo ningún cerebro disponible. Revise la "
-                    "conexión a internet, la clave de Claude o que Ollama esté en marcha.",
+                    "conexión a internet, las claves del archivo punto env o que Ollama esté en marcha.",
         confundido="Me temo que me he confundido con esa petición. ¿Podría pedírmela de otra forma?",
         temporizador="{T}, el temporizador ha terminado.",
         temporizador_motivo="{T}, es la hora: {motivo}.",
@@ -61,7 +61,7 @@ IDIOMAS = {
         despedidas=frozenset({"thats all", "that is all", "nothing", "goodbye", "bye",
                               "thank you thats all"}),
         sin_cerebro="I'm sorry, {t}, I have no brain available at the moment. Please check the "
-                    "internet connection, the Claude API key, or that Ollama is running.",
+                    "internet connection, the keys in the dot env file, or that Ollama is running.",
         confundido="I'm afraid I got rather tangled up with that request. Could you phrase it differently?",
         temporizador="{T}, your timer is up.",
         temporizador_motivo="{T}, it's time: {motivo}.",

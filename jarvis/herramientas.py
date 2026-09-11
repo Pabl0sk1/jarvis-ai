@@ -54,6 +54,17 @@ class Herramientas:
         self._avisar = avisar
         self._lista = [
             Herramienta(
+                "buscar_en_internet",
+                "Busca información actual en internet: noticias, resultados deportivos, precios, "
+                "horarios o cualquier dato reciente que no sepas con seguridad.",
+                {"type": "object", "properties": {
+                    "consulta": {"type": "string"},
+                    "noticias": {"type": "boolean",
+                                 "description": "true para buscar sólo noticias recientes."},
+                }, "required": ["consulta"]},
+                self.buscar_en_internet,
+            ),
+            Herramienta(
                 "consultar_clima",
                 "Tiempo actual y previsión de los próximos tres días en una ciudad.",
                 {"type": "object", "properties": {
@@ -122,7 +133,7 @@ class Herramientas:
         return [{"name": h.nombre, "description": h.descripcion, "input_schema": h.parametros}
                 for h in self._lista]
 
-    def para_ollama(self) -> list[dict]:
+    def para_openai(self) -> list[dict]:
         return [{"type": "function", "function": {
                     "name": h.nombre, "description": h.descripcion, "parameters": h.parametros}}
                 for h in self._lista]
@@ -139,6 +150,21 @@ class Herramientas:
             return f"Error al ejecutar {nombre}: {error}"
 
     # --- Implementaciones -----------------------------------------------------
+
+    def buscar_en_internet(self, consulta: str, noticias: bool = False) -> str:
+        from ddgs import DDGS  # se importa aquí porque tarda y no siempre hace falta
+
+        region = "xl-es" if idiomas.actual().codigo == "es" else "us-en"
+        buscador = DDGS()
+        if noticias:
+            resultados = [{"fecha": r.get("date", "")[:10], "titulo": r["title"], "resumen": r.get("body", "")}
+                          for r in buscador.news(consulta, region=region, max_results=5)]
+        else:
+            resultados = [{"titulo": r["title"], "resumen": r["body"]}
+                          for r in buscador.text(consulta, region=region, max_results=5)]
+        if not resultados:
+            return "No he encontrado nada."
+        return json.dumps(resultados, ensure_ascii=False)
 
     def consultar_clima(self, ciudad: str | None = None) -> str:
         ciudad = ciudad or config.CIUDAD
