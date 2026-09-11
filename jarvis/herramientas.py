@@ -149,7 +149,8 @@ class Herramientas:
                     {"type": "object", "properties": {
                         "accion": {"type": "string", "enum": ACCIONES_TELE},
                         "veces": {"type": "integer",
-                                  "description": "Cuántas veces pulsar (p. ej. subir 5 el volumen). Por defecto 1."},
+                                  "description": "Cuántas veces pulsar: 'un poco' son 2 o 3; para deshacer "
+                                                 "algo, usa el mismo número que antes. Por defecto 1."},
                     }, "required": ["accion"]},
                     self._tele.controlar,
                 ),
@@ -160,6 +161,12 @@ class Herramientas:
                         "app": {"type": "string"},
                     }, "required": ["app"]},
                     self._tele.abrir_app,
+                ),
+                Herramienta(
+                    "ver_apps_tele",
+                    "Lista las aplicaciones instaladas en la tele Samsung del usuario.",
+                    {"type": "object", "properties": {}},
+                    self._tele.apps,
                 ),
             ]
         self._por_nombre = {h.nombre: h for h in self._lista}

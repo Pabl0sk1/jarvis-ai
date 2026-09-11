@@ -6,6 +6,8 @@
 
 import json
 import logging
+import re
+import unicodedata
 
 import anthropic
 import requests
@@ -24,6 +26,18 @@ URL_GROQ = "https://api.groq.com/openai/v1"
 URL_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai/"
 AVISO_ULTIMA_RONDA = ("(Aviso del sistema: ya no puedes usar más herramientas. "
                       "Responde ahora con la información que tienes.)")
+# Pedidos que implican hacer algo. Si el modelo contesta sin usar ninguna herramienta
+# (algunos dicen "hecho" sin hacerlo), se repite la petición obligándole a usar una.
+ORDEN = re.compile(
+    r"\b(apag|enciend|encend|prend|sub[ei]|baj[ae]|pon|abr[eai]|cierr|cambi|silenci|acuerd|"
+    r"recuerd|anot|olvid|busc|temporizador|alarma|turn|open|close|remember|mute|switch)",
+    re.IGNORECASE,
+)
+
+
+def _pide_accion(texto: str) -> bool:
+    sin_tildes = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return bool(ORDEN.search(sin_tildes))
 
 
 class Claude:
@@ -83,12 +97,12 @@ class CompatibleOpenAI:
     """Cualquier proveedor con API compatible con OpenAI: Groq, Gemini, Ollama..."""
 
     def __init__(self, nombre: str, modelo: str, url: str, clave: str, herramientas: Herramientas,
-                 comprobar=None):
+                 comprobar=None, espera: float = 45, reintentos: int = 1):
         self.nombre = f"{nombre} ({modelo})"
         self._modelo = modelo
         self._herramientas = herramientas
         self._comprobar = comprobar
-        self._cliente = OpenAI(base_url=url, api_key=clave, max_retries=1, timeout=45)
+        self._cliente = OpenAI(base_url=url, api_key=clave, max_retries=reintentos, timeout=espera)
 
     def disponible(self) -> bool:
         return self._comprobar() if self._comprobar else True
@@ -97,8 +111,11 @@ class CompatibleOpenAI:
         mensajes = [{"role": "system", "content": sistema}, *historial,
                     {"role": "user", "content": texto}]
 
+        usada = forzar = False  # ¿ya usó alguna herramienta? ¿hay que obligarle a usarla?
         for paso in range(MAX_PASOS):
             opciones = {"tools": self._herramientas.para_openai()}
+            if forzar:
+                opciones["tool_choice"] = "required"
             if paso == MAX_PASOS - 1:
                 # Última ronda sin herramientas, para que conteste con lo que ya tiene
                 # (algunos modelos, como gpt-oss en Groq, ignoran tool_choice="none")
@@ -110,7 +127,12 @@ class CompatibleOpenAI:
                          r.usage.prompt_tokens, r.usage.completion_tokens)
             mensaje = r.choices[0].message
             if not mensaje.tool_calls:
+                if not usada and not forzar and _pide_accion(texto):
+                    log.info("%s contestó a una orden sin usar herramientas; se lo repito", self.nombre)
+                    forzar = True
+                    continue
                 return (mensaje.content or "").strip()
+            usada, forzar = True, False
             mensajes.append({
                 "role": "assistant", "content": mensaje.content or "",
                 # model_dump conserva los campos extra (Gemini necesita su "thought_signature")
@@ -181,11 +203,13 @@ def _crear(nombre: str, herramientas: Herramientas):
     if nombre == "claude":
         return Claude(herramientas) if config.ANTHROPIC_API_KEY else None
     if nombre == "groq":
+        # Con un reintento: cuando se supera el límite por minuto, espera lo que pide Groq
         return (CompatibleOpenAI("Groq", config.MODELO_GROQ, URL_GROQ, config.GROQ_API_KEY, herramientas)
                 if config.GROQ_API_KEY else None)
     if nombre == "gemini":
+        # Gemini a veces se cuelga ~30 s: mejor pasar pronto al siguiente cerebro
         return (CompatibleOpenAI("Gemini", config.MODELO_GEMINI, URL_GEMINI, config.GEMINI_API_KEY,
-                                 herramientas)
+                                 herramientas, espera=20, reintentos=0)
                 if config.GEMINI_API_KEY else None)
     if nombre == "local":
         return CompatibleOpenAI("local", config.MODELO_LOCAL, f"{config.OLLAMA_HOST}/v1", "ollama",

@@ -32,7 +32,7 @@ BUSQUEDA_WEB_CLAUDE = _si("JARVIS_BUSQUEDA_WEB_CLAUDE", "no")  # de pago: 0,01 U
 GROQ_API_KEY = _texto("GROQ_API_KEY", "")
 MODELO_GROQ = _texto("JARVIS_MODELO_GROQ", "openai/gpt-oss-120b")
 GEMINI_API_KEY = _texto("GEMINI_API_KEY", "")
-MODELO_GEMINI = _texto("JARVIS_MODELO_GEMINI", "gemini-3.5-flash-lite")
+MODELO_GEMINI = _texto("JARVIS_MODELO_GEMINI", "gemini-3.1-flash-lite")
 MODELO_LOCAL = _texto("JARVIS_MODELO_LOCAL", "qwen2.5:3b")
 OLLAMA_HOST = _texto("OLLAMA_HOST", "http://localhost:11434")
 

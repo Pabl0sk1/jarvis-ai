@@ -62,6 +62,16 @@ class Tele:
         self._pulsar(tecla, max(1, min(int(veces), 30)))
         return "Hecho."
 
+    def apps(self) -> str:
+        if not self.encendida():
+            return "La tele está apagada."
+        tele = self._conectar()
+        try:
+            instaladas = tele.app_list() or []
+        finally:
+            tele.close()
+        return ", ".join(a.get("name", "") for a in instaladas) or "No pude leer las apps de la tele."
+
     def abrir_app(self, app: str) -> str:
         if not self.encendida():
             return "La tele está apagada; hay que encenderla primero."

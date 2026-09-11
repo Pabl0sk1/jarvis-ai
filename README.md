@@ -142,7 +142,7 @@ Todo se configura en el archivo `.env` (ver [`.env.example`](.env.example)):
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `JARVIS_CEREBROS` | `claude,gemini,groq,local` | Orden en que se prueban los cerebros |
-| `GEMINI_API_KEY` / `JARVIS_MODELO_GEMINI` | — / `gemini-3.5-flash-lite` | Gemini (gratis) |
+| `GEMINI_API_KEY` / `JARVIS_MODELO_GEMINI` | — / `gemini-3.1-flash-lite` | Gemini (gratis) |
 | `GROQ_API_KEY` / `JARVIS_MODELO_GROQ` | — / `openai/gpt-oss-120b` | Groq (gratis) |
 | `ANTHROPIC_API_KEY` / `JARVIS_MODELO_CLAUDE` | — / `claude-sonnet-5` | Claude (de pago) |
 | `JARVIS_BUSQUEDA_WEB_CLAUDE` | `no` | Búsqueda propia de Claude (0,01 USD por búsqueda) en vez de la gratuita |
