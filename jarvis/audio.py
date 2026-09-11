@@ -6,6 +6,8 @@ from collections import deque
 import numpy as np
 import sounddevice as sd
 
+from . import config
+
 FRECUENCIA = 16000
 BLOQUE = 1280  # 80 ms: el tamaño que espera openWakeWord
 SEG_POR_BLOQUE = BLOQUE / FRECUENCIA
@@ -23,13 +25,21 @@ def pitido(frecuencia: float = 880, duracion: float = 0.12) -> None:
     sd.play(tono.astype(np.float32), 22050)
 
 
+def _dispositivo(valor: str) -> int | str | None:
+    """JARVIS_MICROFONO: vacío = el de Windows, un número o parte del nombre."""
+    if not valor:
+        return None
+    return int(valor) if valor.isdigit() else valor
+
+
 class Microfono:
     """Graba sin parar en segundo plano y deja el audio en una cola por bloques."""
 
     def __init__(self):
         self._cola: queue.Queue[np.ndarray] = queue.Queue()
         self._stream = sd.InputStream(samplerate=FRECUENCIA, channels=1, dtype="int16",
-                                      blocksize=BLOQUE, callback=self._recibir)
+                                      blocksize=BLOQUE, callback=self._recibir,
+                                      device=_dispositivo(config.MICROFONO))
         self.ruido = 150.0  # ruido de fondo estimado; se ajusta solo mientras espera
 
     def _recibir(self, indata, frames, tiempo, estado) -> None:

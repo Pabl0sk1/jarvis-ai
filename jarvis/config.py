@@ -48,6 +48,7 @@ VELOCIDAD_EN = _texto("JARVIS_VELOCIDAD_EN", "+0%")
 TRATAMIENTO_EN = _texto("JARVIS_TRATAMIENTO_EN", "sir")
 
 # Oído
+MICROFONO = _texto("JARVIS_MICROFONO", "")  # nombre (o parte) o número; vacío = el de Windows
 PALABRA_ACTIVACION = _texto("JARVIS_PALABRA_ACTIVACION", "hey_jarvis")
 UMBRAL_ACTIVACION = _numero("JARVIS_UMBRAL_ACTIVACION", 0.5)
 MODELO_WHISPER = _texto("JARVIS_MODELO_WHISPER", "small")
