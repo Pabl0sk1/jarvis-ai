@@ -19,9 +19,11 @@ from .personalidad import instrucciones_sistema
 log = logging.getLogger(__name__)
 
 MAX_TURNOS = 10  # turnos de conversación que recuerda dentro de una sesión
-MAX_PASOS = 6    # rondas de herramientas por respuesta, para no entrar en bucle
+MAX_PASOS = 5    # rondas de herramientas por respuesta; en la última tiene que contestar ya
 URL_GROQ = "https://api.groq.com/openai/v1"
 URL_GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai/"
+AVISO_ULTIMA_RONDA = ("(Aviso del sistema: ya no puedes usar más herramientas. "
+                      "Responde ahora con la información que tienes.)")
 
 
 class Claude:
@@ -46,11 +48,12 @@ class Claude:
             })
         mensajes = [*historial, {"role": "user", "content": texto}]
 
-        for _ in range(MAX_PASOS):
+        for paso in range(MAX_PASOS):
             try:
                 r = self._cliente.messages.create(
                     model=config.MODELO_CLAUDE, max_tokens=1024, system=sistema,
                     tools=herramientas, messages=mensajes,
+                    tool_choice={"type": "none" if paso == MAX_PASOS - 1 else "auto"},
                 )
             except anthropic.BadRequestError as error:
                 if self._busqueda_web and "web_search" in str(error):
@@ -59,6 +62,8 @@ class Claude:
                     return self.responder(sistema, historial, texto)
                 raise
 
+            log.info("%s: %d tokens de entrada, %d de salida", self.nombre,
+                     r.usage.input_tokens, r.usage.output_tokens)
             if r.stop_reason not in ("tool_use", "pause_turn"):
                 return "".join(b.text for b in r.content if b.type == "text").strip()
 
@@ -92,10 +97,17 @@ class CompatibleOpenAI:
         mensajes = [{"role": "system", "content": sistema}, *historial,
                     {"role": "user", "content": texto}]
 
-        for _ in range(MAX_PASOS):
-            r = self._cliente.chat.completions.create(
-                model=self._modelo, messages=mensajes, tools=self._herramientas.para_openai(),
-            )
+        for paso in range(MAX_PASOS):
+            opciones = {"tools": self._herramientas.para_openai()}
+            if paso == MAX_PASOS - 1:
+                # Última ronda sin herramientas, para que conteste con lo que ya tiene
+                # (algunos modelos, como gpt-oss en Groq, ignoran tool_choice="none")
+                opciones = {}
+                mensajes.append({"role": "user", "content": AVISO_ULTIMA_RONDA})
+            r = self._cliente.chat.completions.create(model=self._modelo, messages=mensajes, **opciones)
+            if r.usage:
+                log.info("%s: %d tokens de entrada, %d de salida", self.nombre,
+                         r.usage.prompt_tokens, r.usage.completion_tokens)
             mensaje = r.choices[0].message
             if not mensaje.tool_calls:
                 return (mensaje.content or "").strip()

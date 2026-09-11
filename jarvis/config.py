@@ -25,7 +25,7 @@ def _si(nombre: str, defecto: str) -> bool:
 # Cerebros, en orden de preferencia: se usa el primero que responda.
 # Sólo cuentan los que tienen clave ("local" sólo si Ollama está en marcha).
 CEREBROS = [c.strip().lower()
-            for c in _texto("JARVIS_CEREBROS", "claude,groq,gemini,local").split(",") if c.strip()]
+            for c in _texto("JARVIS_CEREBROS", "claude,gemini,groq,local").split(",") if c.strip()]
 ANTHROPIC_API_KEY = _texto("ANTHROPIC_API_KEY", "")
 MODELO_CLAUDE = _texto("JARVIS_MODELO_CLAUDE", "claude-sonnet-5")
 BUSQUEDA_WEB_CLAUDE = _si("JARVIS_BUSQUEDA_WEB_CLAUDE", "no")  # de pago: 0,01 USD por búsqueda

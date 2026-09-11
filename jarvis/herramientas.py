@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import threading
 import webbrowser
 from dataclasses import dataclass
@@ -28,6 +29,16 @@ APLICACIONES = {
     "spotify": "spotify:",
     "correo": "https://mail.google.com",
 }
+
+# Los modelos añaden fechas a las búsquedas ("noticias 11 de septiembre 2026") y así el
+# buscador no encuentra nada; se quitan antes de buscar.
+FECHAS = re.compile(
+    r"\b(\d{1,2}\s+(de\s+)?)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|"
+    r"octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)(\s+\d{1,2}\b,?)?(\s+(de\s+)?\d{4})?\b|\b20\d{2}\b|"
+    r"\b(hoy|today)\b",
+    re.IGNORECASE,
+)
 
 # Códigos meteorológicos WMO que devuelve Open-Meteo
 CIELO = {
@@ -56,7 +67,8 @@ class Herramientas:
             Herramienta(
                 "buscar_en_internet",
                 "Busca información actual en internet: noticias, resultados deportivos, precios, "
-                "horarios o cualquier dato reciente que no sepas con seguridad.",
+                "horarios o cualquier dato reciente que no sepas con seguridad. Usa consultas "
+                "cortas, de 2 a 5 palabras y sin fechas (p. ej. 'noticias Paraguay').",
                 {"type": "object", "properties": {
                     "consulta": {"type": "string"},
                     "noticias": {"type": "boolean",
@@ -154,16 +166,26 @@ class Herramientas:
     def buscar_en_internet(self, consulta: str, noticias: bool = False) -> str:
         from ddgs import DDGS  # se importa aquí porque tarda y no siempre hace falta
 
+        consulta = re.sub(r"\s+", " ", FECHAS.sub(" ", consulta)).strip() or consulta
         region = "xl-es" if idiomas.actual().codigo == "es" else "us-en"
         buscador = DDGS()
+        resultados = []
+        # ddgs lanza una excepción cuando no encuentra nada; si no hay noticias, se prueba en la web
         if noticias:
-            resultados = [{"fecha": r.get("date", "")[:10], "titulo": r["title"], "resumen": r.get("body", "")}
-                          for r in buscador.news(consulta, region=region, max_results=5)]
-        else:
-            resultados = [{"titulo": r["title"], "resumen": r["body"]}
-                          for r in buscador.text(consulta, region=region, max_results=5)]
+            try:
+                resultados = [{"fecha": r.get("date", "")[:10], "titulo": r["title"],
+                               "resumen": r.get("body", "")[:300]}
+                              for r in buscador.news(consulta, region=region, max_results=5)]
+            except Exception as error:
+                log.info("Sin noticias para %r (%s); busco en la web", consulta, error)
         if not resultados:
-            return "No he encontrado nada."
+            try:
+                resultados = [{"titulo": r["title"], "resumen": r["body"][:300]}
+                              for r in buscador.text(consulta, region=region, max_results=5)]
+            except Exception as error:
+                log.info("Sin resultados para %r (%s)", consulta, error)
+        if not resultados:
+            return "No he encontrado nada. Prueba otra consulta más corta y sin fechas."
         return json.dumps(resultados, ensure_ascii=False)
 
     def consultar_clima(self, ciudad: str | None = None) -> str:

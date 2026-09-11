@@ -36,7 +36,7 @@ Habla **español latino** e **inglés** (como en la versión original de la pel�
 2. Oído ──────── faster-whisper convierte tu voz en texto (local)
    │
    ▼
-3. Cerebro ───── Claude ─► Groq ─► Gemini ─► Ollama   (el primero que responda)
+3. Cerebro ───── Claude ─► Gemini ─► Groq ─► Ollama   (el primero que responda)
    │                 └─ herramientas: búsqueda web, clima, temporizadores, memoria...
    ▼
 4. Voz ───────── Edge TTS ──► si falla ──► voz de Windows
@@ -57,8 +57,8 @@ Habla **español latino** e **inglés** (como en la versión original de la pel�
 
 | Cerebro | Precio | Ventaja | Dónde sacar la clave |
 |---|---|---|---|
-| **Groq** | Gratis (~1.000 peticiones/día) | Rapidísimo, ideal para voz | [console.groq.com/keys](https://console.groq.com/keys) |
-| **Gemini** | Gratis (con límites diarios) | Muy bueno en español | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **Gemini** | Gratis (con límites diarios) | Rápido y muy bueno en español | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **Groq** | Gratis (~50–70 preguntas/día) | Muy rápido si no hablas seguido; buen respaldo | [console.groq.com/keys](https://console.groq.com/keys) |
 | **Claude** | De pago (~1 centavo por pregunta) | El más inteligente | [platform.claude.com](https://platform.claude.com/settings/keys) |
 | **Ollama** | Gratis | Funciona sin internet y es privado | No necesita clave |
 
@@ -126,9 +126,9 @@ Todo se configura en el archivo `.env` (ver [`.env.example`](.env.example)):
 
 | Variable | Por defecto | Descripción |
 |---|---|---|
-| `JARVIS_CEREBROS` | `claude,groq,gemini,local` | Orden en que se prueban los cerebros |
-| `GROQ_API_KEY` / `JARVIS_MODELO_GROQ` | — / `openai/gpt-oss-120b` | Groq (gratis) |
+| `JARVIS_CEREBROS` | `claude,gemini,groq,local` | Orden en que se prueban los cerebros |
 | `GEMINI_API_KEY` / `JARVIS_MODELO_GEMINI` | — / `gemini-3.5-flash-lite` | Gemini (gratis) |
+| `GROQ_API_KEY` / `JARVIS_MODELO_GROQ` | — / `openai/gpt-oss-120b` | Groq (gratis) |
 | `ANTHROPIC_API_KEY` / `JARVIS_MODELO_CLAUDE` | — / `claude-sonnet-5` | Claude (de pago) |
 | `JARVIS_BUSQUEDA_WEB_CLAUDE` | `no` | Búsqueda propia de Claude (0,01 USD por búsqueda) en vez de la gratuita |
 | `JARVIS_MODELO_LOCAL` | `qwen2.5:3b` | Modelo de Ollama |
@@ -185,6 +185,7 @@ Todos los cerebros la descubren solos y la usan cuando haga falta.
 | Te entiende mal | Usa `JARVIS_MODELO_WHISPER=medium` (más lento) |
 | "No tengo ningún cerebro disponible" | Revisa las claves del `.env`, tu conexión o que Ollama esté abierto. Con `--debug` verás por qué falla cada uno |
 | Un cerebro gratuito deja de responder | Has llegado al límite diario; Jarvis pasa solo al siguiente cerebro |
+| Groq tarda 10–20 segundos | Has superado su límite por minuto (8.000 tokens); espera un poco o usa Gemini primero |
 | Se escucha a sí mismo | Baja el volumen de los altavoces o usa auriculares |
 
 ## Hoja de ruta
