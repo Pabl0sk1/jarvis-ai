@@ -15,6 +15,8 @@ import requests
 from . import config
 from . import idioma as idiomas
 from .memoria import Memoria
+from .tele import ACCIONES as ACCIONES_TELE
+from .tele import Tele
 
 log = logging.getLogger(__name__)
 
@@ -137,6 +139,29 @@ class Herramientas:
                 self.olvidar,
             ),
         ]
+        self._tele = Tele(config.TELE_IP, config.TELE_MAC) if config.TELE_IP else None
+        if self._tele:
+            self._lista += [
+                Herramienta(
+                    "controlar_tele",
+                    "Controla la tele Samsung del usuario: encender, apagar, volumen, canales, "
+                    "moverse por los menús o cambiar de entrada (hdmi = la TV box Android).",
+                    {"type": "object", "properties": {
+                        "accion": {"type": "string", "enum": ACCIONES_TELE},
+                        "veces": {"type": "integer",
+                                  "description": "Cuántas veces pulsar (p. ej. subir 5 el volumen). Por defecto 1."},
+                    }, "required": ["accion"]},
+                    self._tele.controlar,
+                ),
+                Herramienta(
+                    "abrir_app_tele",
+                    "Abre una aplicación en la tele Samsung (YouTube, Netflix, Prime Video, Spotify...).",
+                    {"type": "object", "properties": {
+                        "app": {"type": "string"},
+                    }, "required": ["app"]},
+                    self._tele.abrir_app,
+                ),
+            ]
         self._por_nombre = {h.nombre: h for h in self._lista}
 
     # --- Formatos para cada cerebro -------------------------------------------

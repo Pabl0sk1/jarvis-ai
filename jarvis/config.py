@@ -53,6 +53,10 @@ TONO_EN = _texto("JARVIS_TONO_EN", "-2Hz")
 VELOCIDAD_EN = _texto("JARVIS_VELOCIDAD_EN", "+0%")
 TRATAMIENTO_EN = _texto("JARVIS_TRATAMIENTO_EN", "sir")
 
+# Dispositivos de casa (vacío = no se usa)
+TELE_IP = _texto("JARVIS_TELE_IP", "")    # tele Samsung smart (Tizen)
+TELE_MAC = _texto("JARVIS_TELE_MAC", "")  # para encenderla por red (Wake-on-LAN)
+
 # Oído
 MICROFONO = _texto("JARVIS_MICROFONO", "")  # nombre (o parte) o número; vacío = el de Windows
 PALABRA_ACTIVACION = _texto("JARVIS_PALABRA_ACTIVACION", "hey_jarvis")

@@ -5,6 +5,8 @@
     python -m jarvis --texto          chat por teclado (para probar sin micrófono)
     python -m jarvis --texto --hablar chat por teclado, pero Jarvis responde en voz alta
     python -m jarvis --probar-voces   escuchar las voces disponibles para elegir una
+    python -m jarvis --buscar-dispositivos  buscar la tele y otros aparatos en la red
+    python -m jarvis --emparejar-tele       dar permiso a Jarvis en la tele Samsung
 """
 
 import argparse
@@ -42,6 +44,44 @@ def probar_voces(voz: Voz) -> None:
             print(f"  {nombre}")
             voz.hablar(FRASES_PRUEBA[codigo], voz_edge=nombre)
     print("\nPon la que más te guste en JARVIS_VOZ_ES / JARVIS_VOZ_EN dentro del archivo .env")
+
+
+def mostrar_dispositivos() -> None:
+    from .red import buscar_dispositivos, ip_local
+
+    print(f"Buscando dispositivos en la red de {ip_local()}...")
+    encontrados = buscar_dispositivos()
+    if not encontrados:
+        print("No encontré nada. ¿Está el PC conectado a la misma red que la tele?")
+    for dispositivo in encontrados:
+        print(" · " + ", ".join(f"{clave}: {valor}" for clave, valor in dispositivo.items() if valor))
+    if any(d["tipo"] == "tele Samsung" for d in encontrados):
+        print("\nPon la IP y la MAC de la tele en JARVIS_TELE_IP y JARVIS_TELE_MAC dentro del .env")
+
+
+def emparejar_tele() -> None:
+    from .tele import Tele
+
+    if not config.TELE_IP:
+        print("Primero pon JARVIS_TELE_IP en el .env (búscala con --buscar-dispositivos).")
+        return
+    tele = Tele(config.TELE_IP, config.TELE_MAC)
+    if not tele.encendida():
+        print("La tele no responde: enciéndela y comprueba que el PC está en su misma red.")
+        return
+    print("Mira la tele: aparecerá un aviso pidiendo permiso para «Jarvis». Elige «Permitir» "
+          "(tienes un minuto)...")
+    try:
+        tele.emparejar()
+    except Exception as error:
+        print(f"No se pudo emparejar: {error}")
+        return
+    if tele.emparejada():
+        print("¡Listo! Jarvis ya puede controlar la tele.")
+    else:
+        print("La tele no dio permiso. Si pulsaste «Denegar», ve en la tele a Configuración → "
+              "General → Administrador de dispositivos externos → Administrador de conexión "
+              "de dispositivos, borra «Jarvis» de la lista y vuelve a intentarlo.")
 
 
 def modo_texto(cerebro: Cerebro, voz: Voz | None) -> None:
@@ -121,6 +161,9 @@ def main() -> None:
     parser.add_argument("--hablar", action="store_true", help="en modo texto, responder también en voz alta")
     parser.add_argument("--idioma", choices=list(idioma.IDIOMAS), help="idioma al arrancar (es | en)")
     parser.add_argument("--probar-voces", action="store_true", help="escuchar las voces disponibles")
+    parser.add_argument("--buscar-dispositivos", action="store_true",
+                        help="buscar la tele y otros aparatos en la red")
+    parser.add_argument("--emparejar-tele", action="store_true", help="dar permiso a Jarvis en la tele Samsung")
     parser.add_argument("--debug", action="store_true", help="mostrar más detalles")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO if args.debug else logging.WARNING,
@@ -130,6 +173,12 @@ def main() -> None:
 
     if args.probar_voces:
         probar_voces(Voz())
+        return
+    if args.buscar_dispositivos:
+        mostrar_dispositivos()
+        return
+    if args.emparejar_tele:
+        emparejar_tele()
         return
 
     memoria = Memoria()

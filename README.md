@@ -22,6 +22,7 @@ Habla **español latino** e **inglés** (como en la versión original de la pel�
 - **Búsqueda en internet gratuita**: noticias, resultados, precios y cualquier dato actual, con cualquier cerebro.
 - **Memoria a largo plazo**: recuerda tus gustos, nombres y rutinas entre sesiones.
 - **Herramientas**: clima, temporizadores con aviso por voz, abrir aplicaciones y búsquedas en Google o YouTube.
+- **Control de la tele**: enciende, apaga, cambia el volumen, los canales y la entrada, y abre apps (YouTube, Netflix...) en teles Samsung smart.
 - **Respaldo sin internet**: si falla la voz online, usa la voz de Windows; si no hay internet, usa el modelo local.
 
 ## Cómo funciona
@@ -103,7 +104,18 @@ iniciar_jarvis.bat --texto           # chatear por teclado (sin micrófono)
 iniciar_jarvis.bat --texto --hablar  # por teclado, pero responde en voz alta
 iniciar_jarvis.bat --probar-voces    # escuchar las voces para elegir la tuya
 iniciar_jarvis.bat --debug           # ver qué herramientas usa y los errores
+iniciar_jarvis.bat --buscar-dispositivos  # buscar la tele en la red de casa
+iniciar_jarvis.bat --emparejar-tele       # dar permiso a Jarvis en la tele (una sola vez)
 ```
+
+### Tele Samsung
+
+1. El PC tiene que estar en la **misma red** que la tele.
+2. En la tele, activa el encendido remoto: *Configuración → General → Red → Conexión con el móvil* (el nombre cambia según el modelo).
+3. Ejecuta `iniciar_jarvis.bat --buscar-dispositivos` y copia la IP y la MAC de la tele en `JARVIS_TELE_IP` y `JARVIS_TELE_MAC`.
+4. Con la tele encendida, ejecuta `iniciar_jarvis.bat --emparejar-tele` y elige **Permitir** en el aviso de la tele.
+
+Conviene reservar la IP de la tele en el router para que no cambie.
 
 Al arrancar muestra qué cerebros va a usar y en qué orden. La primera vez descarga los modelos de voz y de activación (unos 500 MB), así que tarda un poco más.
 
@@ -117,6 +129,9 @@ Al arrancar muestra qué cerebros va a usar y en qué orden. La primera vez desc
 | "Acuérdate de que mi color favorito es el azul" | Lo guarda en su memoria |
 | "Pon música de AC/DC en YouTube" | Abre la búsqueda en el navegador |
 | "Abre la calculadora" | Abre la aplicación |
+| "Enciende la tele y pon YouTube" | Enciende la tele por red y abre YouTube |
+| "Sube un poco el volumen de la tele" | Pulsa varias veces subir volumen |
+| "Pon la tele en la TV box" | Cambia la tele a la entrada HDMI |
 | "Jarvis, habla en inglés" | *"Of course, sir."* A partir de ahí, todo en inglés |
 | "Eso es todo" | *"Aquí estaré, señor."* y vuelve a esperar |
 
@@ -138,6 +153,7 @@ Todo se configura en el archivo `.env` (ver [`.env.example`](.env.example)):
 | `JARVIS_VOZ_ES` / `JARVIS_VOZ_EN` | `es-MX-JorgeNeural` / `en-GB-RyanNeural` | Voz de cada idioma |
 | `JARVIS_TONO_ES` / `JARVIS_TONO_EN` | `-4Hz` / `-2Hz` | Más negativo = voz más grave |
 | `JARVIS_TRATAMIENTO_ES` / `_EN` | `señor` / `sir` | Cómo te llama Jarvis |
+| `JARVIS_TELE_IP` / `JARVIS_TELE_MAC` | — | Tele Samsung a controlar; vacío = sin tele |
 | `JARVIS_MICROFONO` | — | Micrófono a usar (número o parte del nombre); vacío = el de Windows |
 | `JARVIS_UMBRAL_ACTIVACION` | `0.5` | Sensibilidad de "Hey Jarvis" |
 | `JARVIS_MODELO_WHISPER` | `small` | `tiny`, `base`, `small` o `medium` |
@@ -154,6 +170,8 @@ jarvis-ai/
 │   ├── personalidad.py  # quién es Jarvis y cómo habla
 │   ├── cerebro.py       # Claude, Groq, Gemini y Ollama, con respaldo entre ellos
 │   ├── herramientas.py  # búsqueda web, clima, temporizadores, apps, memoria...
+│   ├── tele.py          # control de teles Samsung por la red
+│   ├── red.py           # búsqueda de dispositivos en la red de casa
 │   ├── memoria.py       # memoria a largo plazo (datos/memoria.json)
 │   ├── audio.py         # micrófono y detección de silencio
 │   ├── activacion.py    # "Hey Jarvis" con openWakeWord
@@ -187,6 +205,8 @@ Todos los cerebros la descubren solos y la usan cuando haga falta.
 | Un cerebro gratuito deja de responder | Has llegado al límite diario; Jarvis pasa solo al siguiente cerebro |
 | Groq tarda 10–20 segundos | Has superado su límite por minuto (8.000 tokens); espera un poco o usa Gemini primero |
 | Se escucha a sí mismo | Baja el volumen de los altavoces o usa auriculares |
+| No encuentra la tele | El PC y la tele tienen que estar en la misma red (mismo router) y la tele encendida |
+| La tele no se enciende por voz | Activa el encendido remoto en la tele y pon `JARVIS_TELE_MAC`; funciona mejor con la tele conectada por cable |
 
 ## Hoja de ruta
 
@@ -198,7 +218,10 @@ Todos los cerebros la descubren solos y la usan cuando haga falta.
 - [ ] Arranque automático con Windows, en segundo plano
 - [ ] Interrumpirle mientras habla
 - [ ] Control del PC: volumen, música, apagar, archivos
-- [ ] Domótica: luces, enchufes y aire acondicionado (Home Assistant)
+- [x] Control de teles Samsung smart por la red
+- [ ] Control de la TV box Android (ADB por red)
+- [ ] Aire acondicionado por infrarrojo
+- [ ] Domótica: luces y enchufes (Home Assistant)
 - [ ] Hablar con Jarvis desde el celular
 - [ ] Versión portátil: Raspberry Pi 5 en la mochila
 - [ ] Integración con el auto

@@ -9,3 +9,5 @@ openai
 ddgs
 python-dotenv
 requests
+samsungtvws
+wakeonlan
