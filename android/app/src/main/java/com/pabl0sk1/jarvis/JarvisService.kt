@@ -23,6 +23,7 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,7 +64,8 @@ class JarvisService : Service() {
 
     private val receptorBluetooth = object : BroadcastReceiver() {
         override fun onReceive(contexto: Context, intent: Intent) {
-            val dispositivo = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+            val dispositivo = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE,
+                BluetoothDevice::class.java) ?: return
             val nombre = nombreBluetooth(dispositivo)
             val conectado = intent.action == BluetoothDevice.ACTION_ACL_CONNECTED
             EstadoJarvis.bluetooth.value = if (conectado) nombre else ""

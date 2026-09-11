@@ -1,0 +1,3 @@
+# gradlew es un script de shell: con saltos de línea de Windows no funciona en Linux/Mac
+android/gradlew text eol=lf
+*.bat text eol=crlf
