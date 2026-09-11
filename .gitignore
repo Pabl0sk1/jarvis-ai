@@ -4,3 +4,7 @@ __pycache__/
 .env
 datos/
 CLAUDE.md
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

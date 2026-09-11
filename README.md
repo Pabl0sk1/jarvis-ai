@@ -137,6 +137,27 @@ Al arrancar muestra qué cerebros va a usar y en qué orden. La primera vez desc
 | "Jarvis, habla en inglés" | *"Of course, sir."* A partir de ahí, todo en inglés |
 | "Eso es todo" | *"Aquí estaré, señor."* y vuelve a esperar |
 
+## App para el celular (Android)
+
+La carpeta [`android/`](android) contiene Jarvis para el celular, para llevarlo a todas partes y usarlo en el auto:
+
+- Escucha **"Hey Jarvis"** siempre, en segundo plano (mismo modelo de openWakeWord que el PC, con ONNX Runtime).
+- Entiende tu voz con el reconocedor de Google y responde con la **misma voz** que el PC (Edge TTS), o con la voz de Google si no hay internet.
+- Usa los mismos cerebros gratuitos (Gemini y Groq) y lee las claves del mismo `.env`.
+- Herramientas: búsqueda web, clima, temporizadores, memoria, abrir apps, **navegar con Google Maps**, **poner y controlar la música**, batería e idioma.
+- **Modo auto**: al conectarse por Bluetooth a la radio (`JARVIS_RADIO_AUTO`), te da la bienvenida, habla por los parlantes y responde más corto.
+
+**Compilar e instalar** (necesita el SDK de Android y Java 17 o superior):
+
+```powershell
+cd android
+.\gradlew.bat installDebug   # con el celular conectado por USB y la depuración USB activada
+```
+
+En Xiaomi/HyperOS, dale a la app batería sin restricciones, "Mostrar sobre otras apps" e "Inicio automático"; si no, el sistema la cierra.
+
+> Las claves de API quedan dentro del APK: es una app personal, no la compartas.
+
 ## Configuración
 
 Todo se configura en el archivo `.env` (ver [`.env.example`](.env.example)):
@@ -179,6 +200,7 @@ jarvis-ai/
 │   ├── activacion.py    # "Hey Jarvis" con openWakeWord
 │   ├── transcripcion.py # voz a texto con faster-whisper
 │   └── voz.py           # texto a voz con Edge TTS / Windows
+├── android/             # app de Jarvis para el celular (Kotlin)
 ├── .env.example
 ├── iniciar_jarvis.bat
 ├── requirements.txt
@@ -224,7 +246,7 @@ Todos los cerebros la descubren solos y la usan cuando haga falta.
 - [ ] Control de la TV box Android (ADB por red)
 - [ ] Aire acondicionado por infrarrojo
 - [ ] Domótica: luces y enchufes (Home Assistant)
-- [ ] Hablar con Jarvis desde el celular
+- [ ] App para el celular con modo auto (código escrito, falta compilarla y probarla)
 - [ ] Versión portátil: Raspberry Pi 5 en la mochila
 - [ ] Integración con el auto
 - [ ] Interfaz visual estilo holograma
@@ -233,6 +255,7 @@ Todos los cerebros la descubren solos y la usan cuando haga falta.
 
 - Inspirado en J.A.R.V.I.S. de *Iron Man* (Marvel Studios). Este proyecto no está afiliado a Marvel ni a Disney. Las voces son sintéticas y sólo se parecen en estilo a la de la película.
 - Ideas tomadas de [OpenClaw](https://openclaw.ai): memoria persistente, herramientas ampliables y "skills".
+- Los modelos preentrenados de openWakeWord (incluido "hey jarvis", copiado en `android/app/src/main/assets`) tienen licencia CC BY-NC-SA 4.0: sólo para uso no comercial.
 - Construido con [openWakeWord](https://github.com/dscripka/openWakeWord), [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [edge-tts](https://github.com/rany2/edge-tts), [ddgs](https://github.com/deedy5/ddgs), [Groq](https://groq.com), [Gemini](https://ai.google.dev), [Claude](https://www.anthropic.com/claude) y [Ollama](https://ollama.com).
 
 ## Licencia
