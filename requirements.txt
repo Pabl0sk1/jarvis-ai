@@ -1,0 +1,10 @@
+faster-whisper
+openwakeword
+sounddevice
+soundfile
+numpy
+edge-tts
+anthropic
+ollama
+python-dotenv
+requests
