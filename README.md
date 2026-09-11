@@ -117,6 +117,8 @@ iniciar_jarvis.bat --emparejar-tele       # dar permiso a Jarvis en la tele (una
 
 Conviene reservar la IP de la tele en el router para que no cambie.
 
+**TV box conectado por HDMI:** si activas **Anynet+ (HDMI-CEC)** en la tele (*Configuración → General → Administrador de dispositivos externos*) y **HDMI-CEC** en el box, cuando la tele esté en la entrada del box, las flechas, OK, volver y reproducir/pausa que envía Jarvis le llegan al box.
+
 Al arrancar muestra qué cerebros va a usar y en qué orden. La primera vez descarga los modelos de voz y de activación (unos 500 MB), así que tarda un poco más.
 
 ### Ejemplos

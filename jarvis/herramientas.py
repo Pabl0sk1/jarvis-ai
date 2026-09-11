@@ -145,7 +145,9 @@ class Herramientas:
                 Herramienta(
                     "controlar_tele",
                     "Controla la tele Samsung del usuario: encender, apagar, volumen, canales, "
-                    "moverse por los menús o cambiar de entrada (hdmi = la TV box Android).",
+                    "moverse por los menús o cambiar de entrada (hdmi = la TV box Android). Cuando la "
+                    "tele está en la entrada HDMI, las flechas, ok, volver, reproducir y pausa "
+                    "controlan la TV box (HDMI-CEC).",
                     {"type": "object", "properties": {
                         "accion": {"type": "string", "enum": ACCIONES_TELE},
                         "veces": {"type": "integer",
