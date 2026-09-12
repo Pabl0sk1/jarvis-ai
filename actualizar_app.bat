@@ -24,6 +24,8 @@ if errorlevel 1 (
     echo esta firmada con otra clave: respalda la memoria, desinstalala y vuelve a ejecutar esto.
     exit /b 1
 )
+rem HyperOS necesita unos segundos tras instalar antes de aceptar los permisos
+timeout /t 3 /nobreak >nul
 rem HyperOS desactiva al actualizar el inicio automatico y "mostrar sobre otras apps": se reactivan
 "%ADB%" shell appops set com.pabl0sk1.jarvis 10008 allow >nul 2>&1
 "%ADB%" shell appops set com.pabl0sk1.jarvis SYSTEM_ALERT_WINDOW allow >nul 2>&1
