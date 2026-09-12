@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -53,7 +54,9 @@ class MainActivity : ComponentActivity() {
         val conversacion by EstadoJarvis.conversacion.collectAsState()
         val bluetooth by EstadoJarvis.bluetooth.collectAsState()
 
-        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Con targetSdk 35 la app ocupa toda la pantalla: se deja sitio a la barra de estado y de navegación
+        Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("J.A.R.V.I.S.", fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Text(estado, color = MaterialTheme.colorScheme.primary)
             if (bluetooth.isNotEmpty()) Text("Bluetooth conectado: $bluetooth")
