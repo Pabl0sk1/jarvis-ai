@@ -46,7 +46,11 @@
         </intent>
     </queries>
 
+    <!-- usesCleartextTraffic: la tele (REST en el puerto 8001) y la notebook (servidor de Jarvis) hablan
+         HTTP sin cifrar dentro de la red de casa. Sin esto, Android 9+ bloquea esas peticiones.
+         Todo lo que va a internet (Gemini, Groq, clima, YouTube, la voz) ya usa HTTPS/WSS. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="Jarvis"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

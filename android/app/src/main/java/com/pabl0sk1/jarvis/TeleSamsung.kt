@@ -42,11 +42,12 @@ class TeleSamsung(contexto: Context) {
         false
     }
 
-    /** Pide permiso en la tele (espera hasta 60 s a que lo acepten). */
-    fun emparejar(): String {
-        if (!encendida()) return NO_RESPONDE
+    /** Pide permiso en la tele (espera hasta 60 s a que lo acepten). Va directo por el WebSocket cifrado. */
+    fun emparejar(): String = try {
         sesion(esperaConexion = 60) {}
-        return if (emparejada()) "Tele emparejada." else "La tele no dio permiso."
+        if (emparejada()) "Tele emparejada." else "La tele no dio permiso."
+    } catch (error: IOException) {
+        "$NO_RESPONDE (${error.message})"
     }
 
     // Las órdenes van directas por el WebSocket, sin preguntar antes por REST si está encendida:
