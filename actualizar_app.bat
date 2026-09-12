@@ -24,5 +24,9 @@ if errorlevel 1 (
     echo está firmada con otra clave: respalda la memoria, desinstálala y vuelve a ejecutar esto.
     exit /b 1
 )
+rem HyperOS desactiva al actualizar el inicio automático y "mostrar sobre otras apps": se reactivan
+"%ADB%" shell appops set com.pabl0sk1.jarvis 10008 allow >nul 2>&1
+"%ADB%" shell appops set com.pabl0sk1.jarvis SYSTEM_ALERT_WINDOW allow >nul 2>&1
+"%ADB%" shell dumpsys deviceidle whitelist +com.pabl0sk1.jarvis >nul 2>&1
 echo.
 echo Listo: Jarvis actualizado conservando sus datos.
