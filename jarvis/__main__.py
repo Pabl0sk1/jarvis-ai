@@ -7,19 +7,23 @@
     python -m jarvis --probar-voces   escuchar las voces disponibles para elegir una
     python -m jarvis --buscar-dispositivos  buscar la tele y otros aparatos en la red
     python -m jarvis --emparejar-tele       dar permiso a Jarvis en la tele Samsung
+    python -m jarvis --servidor             sólo el servidor para la app del celular (sin voz)
 """
 
 import argparse
 import logging
 import re
 import sys
+import threading
 import unicodedata
 
 from . import config, idioma
 from .cerebro import Cerebro
+from .energia import VigilanteEnergia
 from .herramientas import Herramientas
 from .memoria import Memoria
 from .personalidad import saludo
+from .respaldo import iniciar_respaldo_diario
 from .voz import Voz
 
 VOCES_PRUEBA = {
@@ -44,6 +48,21 @@ def probar_voces(voz: Voz) -> None:
             print(f"  {nombre}")
             voz.hablar(FRASES_PRUEBA[codigo], voz_edge=nombre)
     print("\nPon la que más te guste en JARVIS_VOZ_ES / JARVIS_VOZ_EN dentro del archivo .env")
+
+
+def iniciar_servidor(herramientas: Herramientas, memoria: Memoria) -> None:
+    """Deja que la app del celular controle esta notebook y comparta la memoria (si hay clave)."""
+    if not config.CLAVE_RED:
+        return
+    from .red import ip_local
+    from .servidor import PUERTO_HTTP, Servidor
+
+    try:
+        Servidor(herramientas, memoria).iniciar()
+    except OSError as error:
+        print(f"No pude abrir el servidor para el celular: {error}")
+        return
+    print(f"Servidor para el celular en {ip_local()}:{PUERTO_HTTP}")
 
 
 def mostrar_dispositivos() -> None:
@@ -164,6 +183,8 @@ def main() -> None:
     parser.add_argument("--buscar-dispositivos", action="store_true",
                         help="buscar la tele y otros aparatos en la red")
     parser.add_argument("--emparejar-tele", action="store_true", help="dar permiso a Jarvis en la tele Samsung")
+    parser.add_argument("--servidor", action="store_true",
+                        help="sólo el servidor para que la app del celular controle esta notebook")
     parser.add_argument("--debug", action="store_true", help="mostrar más detalles")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO if args.debug else logging.WARNING,
@@ -182,13 +203,23 @@ def main() -> None:
         return
 
     memoria = Memoria()
-    voz = Voz() if (not args.texto or args.hablar) else None
+    voz = Voz() if (not args.texto or args.hablar) and not args.servidor else None
     avisar = voz.hablar if voz else (lambda mensaje: print(f"\nJarvis: {mensaje}\nTú: ", end=""))
-    cerebro = Cerebro(Herramientas(memoria, avisar), memoria)
+    herramientas = Herramientas(memoria, avisar)
+    cerebro = Cerebro(herramientas, memoria)
     print(f"JARVIS · idioma: {idioma.actual().nombre} · cerebro: {cerebro.describir()}")
+    iniciar_servidor(herramientas, memoria)
+    VigilanteEnergia(avisar).iniciar()  # cortes de luz
+    iniciar_respaldo_diario()           # copia de seguridad de la memoria
 
     try:
-        if args.texto:
+        if args.servidor:
+            if not config.CLAVE_RED:
+                print("Falta JARVIS_CLAVE_RED en el .env: sin clave no arranco el servidor.")
+                return
+            print("Sólo servidor: la app del celular ya puede controlar esta notebook. Ctrl+C para salir.")
+            threading.Event().wait()
+        elif args.texto:
             modo_texto(cerebro, voz)
         else:
             modo_voz(cerebro, voz)

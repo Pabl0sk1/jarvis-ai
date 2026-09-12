@@ -1,9 +1,11 @@
 """Herramientas: cosas que Jarvis puede hacer, no sólo decir."""
 
+import ctypes
 import json
 import logging
 import os
 import re
+import subprocess
 import threading
 import webbrowser
 from dataclasses import dataclass
@@ -31,6 +33,11 @@ APLICACIONES = {
     "spotify": "spotify:",
     "correo": "https://mail.google.com",
 }
+
+# Teclas multimedia de Windows (códigos virtuales): funcionan con cualquier reproductor
+TECLAS_PC = {"subir_volumen": 0xAF, "bajar_volumen": 0xAE, "silenciar": 0xAD,
+             "reproducir_pausar": 0xB3, "siguiente": 0xB0, "anterior": 0xB1}
+ACCIONES_PC = [*TECLAS_PC, "bloquear", "apagar", "cancelar_apagado"]
 
 # Los modelos añaden fechas a las búsquedas ("noticias 11 de septiembre 2026") y así el
 # buscador no encuentra nada; se quitan antes de buscar.
@@ -103,6 +110,17 @@ class Herramientas:
                     "nombre": {"type": "string", "enum": list(APLICACIONES)},
                 }, "required": ["nombre"]},
                 self.abrir_aplicacion,
+            ),
+            Herramienta(
+                "controlar_pc",
+                "Controla esta notebook (Windows): volumen (cada paso sube o baja un 2 %), la música "
+                "que suene, bloquearla o apagarla. Apagar la apaga en 60 segundos y se puede cancelar; "
+                "pide confirmación al usuario antes de apagar.",
+                {"type": "object", "properties": {
+                    "accion": {"type": "string", "enum": ACCIONES_PC},
+                    "veces": {"type": "integer", "description": "Pasos de volumen. Por defecto 1."},
+                }, "required": ["accion"]},
+                self.controlar_pc,
             ),
             Herramienta(
                 "buscar_en_navegador",
@@ -276,6 +294,24 @@ class Herramientas:
             return f"No sé abrir {nombre}. Puedo abrir: {', '.join(APLICACIONES)}."
         os.startfile(destino)
         return f"{nombre} abierto."
+
+    def controlar_pc(self, accion: str, veces: int = 1) -> str:
+        if accion in TECLAS_PC:
+            tecla = TECLAS_PC[accion]
+            for _ in range(max(1, min(int(veces), 50))):
+                ctypes.windll.user32.keybd_event(tecla, 0, 0, 0)
+                ctypes.windll.user32.keybd_event(tecla, 0, 2, 0)  # 2 = soltar la tecla
+            return "Hecho."
+        if accion == "bloquear":
+            ctypes.windll.user32.LockWorkStation()
+            return "Notebook bloqueada."
+        if accion == "apagar":
+            subprocess.run(["shutdown", "/s", "/t", "60"], check=True)
+            return "La notebook se apagará en 60 segundos. Se puede cancelar con cancelar_apagado."
+        if accion == "cancelar_apagado":
+            cancelado = subprocess.run(["shutdown", "/a"], capture_output=True).returncode == 0
+            return "Apagado cancelado." if cancelado else "No había ningún apagado programado."
+        return f"No conozco la acción {accion}."
 
     def buscar_en_navegador(self, consulta: str, sitio: str = "google") -> str:
         if sitio == "youtube":

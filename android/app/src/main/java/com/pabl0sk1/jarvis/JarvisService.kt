@@ -20,6 +20,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -39,9 +40,18 @@ import java.text.Normalizer
 
 /** Lo que la pantalla muestra del servicio. */
 object EstadoJarvis {
+    enum class Fase { APAGADO, ESPERANDO, ESCUCHANDO, PENSANDO, HABLANDO }
+
     val estado = MutableStateFlow("Apagado")
+    val fase = MutableStateFlow(Fase.APAGADO)
+    val nivel = MutableStateFlow(0f)  // volumen del micrófono (0..1), para animar el reactor
     val conversacion = MutableStateFlow(listOf<String>())
     val bluetooth = MutableStateFlow("")
+
+    fun cambiar(nuevaFase: Fase, texto: String) {
+        fase.value = nuevaFase
+        estado.value = texto
+    }
 
     fun anotar(linea: String) = conversacion.update { (it + linea).takeLast(40) }
 }
@@ -58,6 +68,25 @@ class JarvisService : Service() {
     private lateinit var memoria: Memoria
     private lateinit var voz: Voz
     private lateinit var oido: Oido
+    private lateinit var herramientas: Herramientas
+    private lateinit var telefono: Telefono
+    private var ultimaLlamada = 0L
+
+    /** Anuncia quién llama (el aviso llega dos veces, con y sin número: sólo se usa el que lo trae). */
+    private val receptorLlamadas = object : BroadcastReceiver() {
+        override fun onReceive(contexto: Context, intent: Intent) {
+            if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) != TelephonyManager.EXTRA_STATE_RINGING) return
+            @Suppress("DEPRECATION")
+            val numero = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER) ?: return
+            val ahora = System.currentTimeMillis()
+            if (ahora - ultimaLlamada < 10_000) return
+            ultimaLlamada = ahora
+            alcance.launch(Dispatchers.IO) {
+                val quien = telefono.nombreDe(numero) ?: numero.chunked(3).joinToString(" ")
+                voz.hablar(Idiomas.actual.let { it.decir(it.llamadaEntrante, quien) })
+            }
+        }
+    }
     private lateinit var cerebro: Cerebro
     private lateinit var detector: DetectorActivacion
     private lateinit var despierto: PowerManager.WakeLock
@@ -87,7 +116,12 @@ class JarvisService : Service() {
         memoria = Memoria(this)
         voz = Voz(this)
         oido = Oido(this)
-        cerebro = Cerebro(Herramientas(this, memoria, alcance) { voz.hablar(it) }, memoria)
+        telefono = Telefono(this)
+        herramientas = Herramientas(this, memoria, alcance, TeleSamsung(this), Notebook(), telefono, Agenda(this)) {
+            voz.hablar(it)
+        }
+        cerebro = Cerebro(herramientas, memoria)
+        herramientas.sincronizarMemoria()
         detector = DetectorActivacion(this)
         despierto = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Jarvis:escucha").apply { acquire() }
@@ -95,6 +129,8 @@ class JarvisService : Service() {
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
         }, ContextCompat.RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(this, receptorLlamadas,
+            IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED), ContextCompat.RECEIVER_EXPORTED)
 
         Log.i(TAG, "Cerebro: ${cerebro.describir()}")
         alcance.launch {
@@ -114,16 +150,18 @@ class JarvisService : Service() {
     override fun onDestroy() {
         alcance.cancel()
         unregisterReceiver(receptorBluetooth)
+        unregisterReceiver(receptorLlamadas)
         if (despierto.isHeld) despierto.release()
         detector.close()
         voz.cerrar()
-        EstadoJarvis.estado.value = "Apagado"
+        EstadoJarvis.cambiar(EstadoJarvis.Fase.APAGADO, "Apagado")
+        EstadoJarvis.nivel.value = 0f
         super.onDestroy()
     }
 
     private suspend fun bucle() {
         while (alcance.isActive) {
-            EstadoJarvis.estado.value = "Esperando «Hey Jarvis»..."
+            EstadoJarvis.cambiar(EstadoJarvis.Fase.ESPERANDO, "Esperando «Hey Jarvis»")
             if (esperarActivacion()) conversar()
         }
     }
@@ -153,6 +191,7 @@ class JarvisService : Service() {
                     if (n <= 0) return@withContext false
                     leidas += n
                 }
+                EstadoJarvis.nivel.value = nivelDe(bloque)
                 if (pedidos.tryReceive().isSuccess) return@withContext true
                 if (detector.puntuar(bloque) >= UMBRAL) return@withContext true
             }
@@ -167,7 +206,7 @@ class JarvisService : Service() {
     private suspend fun conversar() {
         voz.pitido()
         while (alcance.isActive) {
-            EstadoJarvis.estado.value = "Te escucho..."
+            EstadoJarvis.cambiar(EstadoJarvis.Fase.ESCUCHANDO, "Te escucho, ${Idiomas.actual.tratamiento}")
             val texto = oido.escuchar() ?: return
             EstadoJarvis.anotar("Tú: $texto")
             val i = Idiomas.actual
@@ -175,10 +214,10 @@ class JarvisService : Service() {
                 voz.hablar(i.decir(i.despedida))
                 return
             }
-            EstadoJarvis.estado.value = "Pensando..."
+            EstadoJarvis.cambiar(EstadoJarvis.Fase.PENSANDO, "Pensando")
             val respuesta = cerebro.responder(texto)
             EstadoJarvis.anotar("Jarvis: $respuesta")
-            EstadoJarvis.estado.value = "Hablando..."
+            EstadoJarvis.cambiar(EstadoJarvis.Fase.HABLANDO, "Hablando")
             voz.hablar(respuesta)
         }
     }
@@ -216,6 +255,13 @@ class JarvisService : Service() {
         private const val UMBRAL = 0.5f
         const val ACCION_DETENER = "com.pabl0sk1.jarvis.DETENER"
         const val ACCION_HABLAR = "com.pabl0sk1.jarvis.HABLAR"
+
+        /** Volumen (RMS) de un bloque de audio, de 0 a 1. */
+        fun nivelDe(bloque: ShortArray): Float {
+            var suma = 0.0
+            for (muestra in bloque) suma += muestra.toDouble() * muestra
+            return (kotlin.math.sqrt(suma / bloque.size) / 3000.0).toFloat().coerceIn(0f, 1f)
+        }
 
         fun normalizar(texto: String): String =
             Normalizer.normalize(texto, Normalizer.Form.NFD)

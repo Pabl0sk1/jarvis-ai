@@ -51,6 +51,27 @@ class Memoria(contexto: Context) {
     }
 
     @Synchronized
+    fun comoJson(): JSONArray = JSONArray().apply {
+        datos.forEach { (dato, fecha) -> put(JSONObject().put("dato", dato).put("fecha", fecha)) }
+    }
+
+    /** Añade los recuerdos de otro dispositivo (la notebook) que aún no tenga. Devuelve cuántos añadió. */
+    @Synchronized
+    fun fusionar(otros: JSONArray): Int {
+        val conocidos = datos.map { it.first.trim().lowercase() }.toMutableSet()
+        var anadidos = 0
+        for (i in 0 until otros.length()) {
+            val otro = otros.optJSONObject(i) ?: continue
+            val dato = otro.optString("dato").trim()
+            if (dato.isEmpty() || !conocidos.add(dato.lowercase())) continue
+            datos += dato to otro.optString("fecha").ifEmpty { LocalDate.now().toString() }
+            anadidos++
+        }
+        if (anadidos > 0) guardar()
+        return anadidos
+    }
+
+    @Synchronized
     fun comoTexto(): String =
         if (datos.isEmpty()) "(todavía no sabes nada del usuario)"
         else datos.joinToString("\n") { (dato, fecha) -> "- $dato (anotado el $fecha)" }

@@ -12,12 +12,14 @@ import android.text.Html
 import android.util.Log
 import android.view.KeyEvent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.LocalDate
 
 class Herramienta(
     val nombre: String,
@@ -31,6 +33,10 @@ class Herramientas(
     private val contexto: Context,
     private val memoria: Memoria,
     private val alcance: CoroutineScope,
+    private val tele: TeleSamsung,
+    private val notebook: Notebook,
+    private val telefono: Telefono,
+    private val agenda: Agenda,
     private val avisar: suspend (String) -> Unit,
 ) {
     private val audio = contexto.getSystemService(AudioManager::class.java)
@@ -120,8 +126,134 @@ class Herramientas(
             objeto("texto" to texto(), requeridos = listOf("texto")),
             ::olvidar,
         ),
-    )
+    ) + herramientasTelefono() + herramientasTele() + herramientasNotebook()
     private val porNombre = lista.associateBy { it.nombre }
+
+    private fun herramientasTelefono(): List<Herramienta> = listOf(
+        Herramienta(
+            "llamar",
+            "Llama por teléfono a un contacto (por su nombre) o a un número.",
+            objeto("destino" to texto("Nombre del contacto o número."), requeridos = listOf("destino")),
+        ) { telefono.llamar(it.getString("destino")) },
+        Herramienta(
+            "enviar_sms",
+            "Envía un SMS a un contacto o número. ANTES de usarla, lee al usuario el destinatario y el " +
+                "mensaje y espera a que lo confirme.",
+            objeto("destino" to texto("Nombre del contacto o número."), "mensaje" to texto(),
+                requeridos = listOf("destino", "mensaje")),
+        ) { telefono.enviarSms(it.getString("destino"), it.getString("mensaje")) },
+        Herramienta(
+            "emergencia",
+            "EMERGENCIA: llama al 911 y avisa por SMS, con la ubicación, a los contactos de emergencia del " +
+                "usuario. Úsala sólo si pide ayuda de emergencia; si no está claro, confirma antes con una " +
+                "pregunta muy corta.",
+            objeto(),
+        ) { telefono.emergencia() },
+        Herramienta(
+            "ver_agenda",
+            "Lee los eventos del calendario del usuario.",
+            objeto("fecha" to texto("Primer día, AAAA-MM-DD. Por defecto, hoy."),
+                "dias" to entero("Cuántos días. Por defecto 1.")),
+        ) {
+            val fecha = it.optString("fecha").takeIf { f -> f.isNotBlank() }?.let(LocalDate::parse) ?: LocalDate.now()
+            agenda.eventos(fecha, it.optInt("dias", 1))
+        },
+        Herramienta(
+            "crear_evento",
+            "Crea un evento en el calendario del usuario.",
+            objeto("titulo" to texto(), "fecha" to texto("AAAA-MM-DD"),
+                "hora" to texto("HH:mm. Vacío = todo el día."), "minutos" to entero("Duración. Por defecto 60."),
+                "lugar" to texto(), requeridos = listOf("titulo", "fecha")),
+        ) {
+            agenda.crearEvento(it.getString("titulo"), it.getString("fecha"),
+                it.optString("hora").takeIf { h -> h.isNotBlank() }, it.optInt("minutos", 60),
+                it.optString("lugar").takeIf { l -> l.isNotBlank() })
+        },
+        Herramienta(
+            "poner_alarma",
+            "Pone una alarma (despertador) en el reloj del celular.",
+            objeto("hora" to entero("0 a 23."), "minutos" to entero("0 a 59."), "etiqueta" to texto(),
+                "dias" to JSONObject().put("type", "array").put("items", JSONObject().put("type", "integer"))
+                    .put("description", "Días en que se repite: 1 = lunes ... 7 = domingo. Vacío = una sola vez."),
+                requeridos = listOf("hora", "minutos")),
+        ) {
+            val dias = it.optJSONArray("dias")?.let { a -> (0 until a.length()).map { i -> a.getInt(i) } }.orEmpty()
+            agenda.ponerAlarma(it.getInt("hora"), it.getInt("minutos"), it.optString("etiqueta"), dias)
+        },
+        Herramienta(
+            "resumen_del_dia",
+            "Reúne el clima, la agenda de hoy y las noticias principales. Úsala cuando el usuario pida un " +
+                "resumen del día, diga 'buenos días' o pregunte qué hay hoy.",
+            objeto(),
+        ) {
+            JSONObject()
+                .put("clima", runCatching { consultarClima(JSONObject()) }.getOrElse { "sin datos" })
+                .put("agenda", agenda.eventos())
+                .put("noticias", runCatching {
+                    buscarEnInternet(JSONObject().put("consulta", "Paraguay").put("noticias", true))
+                }.getOrElse { "sin datos" })
+                .toString()
+        },
+    )
+
+    private fun herramientasTele(): List<Herramienta> = if (!tele.configurada()) emptyList() else listOf(
+        Herramienta(
+            "controlar_tele",
+            "Controla la tele Samsung de casa: encender, apagar, volumen, canales, moverse por los menús o " +
+                "cambiar de entrada (hdmi = la TV box). Con la tele en la entrada HDMI, las flechas, ok, " +
+                "volver, reproducir y pausa controlan la TV box.",
+            objeto("accion" to enumeracion(TeleSamsung.ACCIONES),
+                "veces" to entero("Cuántas veces pulsar: 'un poco' son 2 o 3; para deshacer, el mismo número " +
+                    "que antes. Por defecto 1."),
+                requeridos = listOf("accion")),
+        ) { tele.controlar(it.getString("accion"), it.optInt("veces", 1)) },
+        Herramienta(
+            "abrir_app_tele",
+            "Abre una aplicación en la tele Samsung (YouTube, Netflix, Disney+, Prime Video, Spotify...).",
+            objeto("app" to texto(), requeridos = listOf("app")),
+        ) { tele.abrirApp(it.getString("app")) },
+        Herramienta("ver_apps_tele", "Lista las aplicaciones instaladas en la tele Samsung.", objeto()) { tele.apps() },
+    )
+
+    private fun herramientasNotebook(): List<Herramienta> = if (!notebook.configurada()) emptyList() else listOf(
+        Herramienta(
+            "controlar_notebook",
+            "Controla la notebook del usuario (Windows) por la red de casa: volumen (cada paso = 2 %), la " +
+                "música que suene, bloquearla o apagarla (se apaga en 60 s y se puede cancelar). Pide " +
+                "confirmación antes de apagarla.",
+            objeto("accion" to enumeracion(listOf("subir_volumen", "bajar_volumen", "silenciar",
+                "reproducir_pausar", "siguiente", "anterior", "bloquear", "apagar", "cancelar_apagado")),
+                "veces" to entero("Pasos de volumen. Por defecto 1."),
+                requeridos = listOf("accion")),
+        ) {
+            notebook.orden("controlar_pc", JSONObject().put("accion", it.getString("accion"))
+                .put("veces", it.optInt("veces", 1)))
+        },
+        Herramienta(
+            "abrir_en_notebook",
+            "Abre una aplicación o página en la notebook: calculadora, bloc de notas, explorador de archivos, " +
+                "configuración, navegador, youtube, spotify o correo.",
+            objeto("nombre" to texto(), requeridos = listOf("nombre")),
+        ) { notebook.orden("abrir_aplicacion", JSONObject().put("nombre", it.getString("nombre"))) },
+        Herramienta(
+            "buscar_en_notebook",
+            "Abre una búsqueda de Google o de YouTube en el navegador de la notebook.",
+            objeto("consulta" to texto(), "sitio" to enumeracion(listOf("google", "youtube")),
+                requeridos = listOf("consulta")),
+        ) {
+            notebook.orden("buscar_en_navegador", JSONObject().put("consulta", it.getString("consulta"))
+                .put("sitio", it.optString("sitio").ifEmpty { "google" }))
+        },
+    )
+
+    /** Fusiona la memoria con la de la notebook, si está en la red (en segundo plano, sin avisar si falla). */
+    fun sincronizarMemoria() {
+        if (!notebook.configurada()) return
+        alcance.launch(Dispatchers.IO) {
+            runCatching { memoria.fusionar(notebook.fusionarMemoria(memoria.comoJson())) }
+                .onFailure { Log.i(TAG, "No se pudo sincronizar la memoria con la notebook: ${it.message}") }
+        }
+    }
 
     fun paraOpenAI(): JSONArray = JSONArray(lista.map { h ->
         JSONObject().put("type", "function").put("function", JSONObject()
@@ -315,11 +447,14 @@ class Herramientas(
 
     private fun recordar(a: JSONObject): String {
         memoria.recordar(a.getString("dato"))
+        sincronizarMemoria()
         return "Guardado en la memoria."
     }
 
     private fun olvidar(a: JSONObject): String {
-        val borrados = memoria.olvidar(a.getString("texto"))
+        val texto = a.getString("texto")
+        val borrados = memoria.olvidar(texto)
+        if (notebook.configurada()) alcance.launch(Dispatchers.IO) { runCatching { notebook.olvidar(texto) } }
         return if (borrados > 0) "Borrados $borrados recuerdos." else "No había nada que coincidiera."
     }
 

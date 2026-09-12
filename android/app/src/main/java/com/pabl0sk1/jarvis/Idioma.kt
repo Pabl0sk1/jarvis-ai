@@ -18,6 +18,7 @@ data class Idioma(
     val temporizador: String,
     val temporizadorMotivo: String,
     val bienvenidaAuto: String,
+    val llamadaEntrante: String,
 ) {
     fun decir(plantilla: String, motivo: String = ""): String = plantilla
         .replace("{t}", tratamiento)
@@ -42,6 +43,7 @@ object Idiomas {
         temporizador = "{T}, el temporizador ha terminado.",
         temporizadorMotivo = "{T}, es la hora: {motivo}.",
         bienvenidaAuto = "Bienvenido a bordo, {t}. Estoy conectado al auto.",
+        llamadaEntrante = "{T}, le llama {motivo}.",
     )
 
     val EN = Idioma(
@@ -60,6 +62,7 @@ object Idiomas {
         temporizador = "{T}, your timer is up.",
         temporizadorMotivo = "{T}, it's time: {motivo}.",
         bienvenidaAuto = "Welcome aboard, {t}. I'm connected to the car.",
+        llamadaEntrante = "{T}, you have a call from {motivo}.",
     )
 
     val todos = mapOf("es" to ES, "en" to EN)

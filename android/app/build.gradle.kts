@@ -67,6 +67,10 @@ android {
         buildConfigField("String", "TONO_ES", ajuste("JARVIS_TONO_ES", "-4Hz"))
         buildConfigField("String", "TONO_EN", ajuste("JARVIS_TONO_EN", "-2Hz"))
         buildConfigField("String", "RADIO_AUTO", ajuste("JARVIS_RADIO_AUTO"))
+        buildConfigField("String", "CLAVE_RED", ajuste("JARVIS_CLAVE_RED"))
+        buildConfigField("String", "CONTACTOS_EMERGENCIA", ajuste("JARVIS_CONTACTOS_EMERGENCIA"))
+        buildConfigField("String", "TELE_IP", ajuste("JARVIS_TELE_IP"))
+        buildConfigField("String", "TELE_MAC", ajuste("JARVIS_TELE_MAC"))
 
         // Sólo celulares ARM de 64 bits (como el Redmi Note 14 5G): ONNX Runtime trae
         // librerías para cuatro arquitecturas y el APK pasaría de ~80 MB

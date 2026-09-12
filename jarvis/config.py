@@ -53,6 +53,12 @@ TONO_EN = _texto("JARVIS_TONO_EN", "-2Hz")
 VELOCIDAD_EN = _texto("JARVIS_VELOCIDAD_EN", "+0%")
 TRATAMIENTO_EN = _texto("JARVIS_TRATAMIENTO_EN", "sir")
 
+# Corte de luz: por debajo de este % de batería sin corriente, la notebook se apaga sola
+BATERIA_MINIMA = _numero("JARVIS_BATERIA_MINIMA", 15)
+
+# Clave compartida con la app del celular para controlar esta notebook (vacía = servidor apagado)
+CLAVE_RED = _texto("JARVIS_CLAVE_RED", "")
+
 # Dispositivos de casa (vacío = no se usa)
 TELE_IP = _texto("JARVIS_TELE_IP", "")    # tele Samsung smart (Tizen)
 TELE_MAC = _texto("JARVIS_TELE_MAC", "")  # para encenderla por red (Wake-on-LAN)
