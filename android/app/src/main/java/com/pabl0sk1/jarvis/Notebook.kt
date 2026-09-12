@@ -8,9 +8,14 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.NetworkInterface
+import java.net.Socket
 import java.net.SocketTimeoutException
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -39,15 +44,38 @@ class Notebook {
     }
 
     private fun pedir(ruta: String, cuerpo: JSONObject?): JSONObject {
-        val base = direccion ?: descubrir() ?: throw IOException(NO_ENCONTRADA)
+        val base = direccion ?: buscar() ?: throw IOException(NO_ENCONTRADA)
         return try {
             llamar(base, ruta, cuerpo)
         } catch (error: IOException) {
             // La IP de la notebook pudo cambiar: se vuelve a buscar una vez
             direccion = null
-            llamar(descubrir() ?: throw IOException(NO_ENCONTRADA), ruta, cuerpo)
+            llamar(buscar() ?: throw IOException(NO_ENCONTRADA), ruta, cuerpo)
         }
     }
+
+    private fun buscar(): String? = descubrir() ?: escanearRed()
+
+    /** Plan B si la difusión UDP no llega (algunos routers la filtran): prueba el puerto del servidor en toda la red. */
+    private fun escanearRed(): String? {
+        val propia = NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { it.interfaceAddresses }.map { it.address }
+            .filterIsInstance<Inet4Address>().firstOrNull() ?: return null
+        val prefijo = propia.hostAddress!!.substringBeforeLast(".")
+        val grupo = Executors.newFixedThreadPool(64)
+        try {
+            val pruebas = (1..254).map { n -> grupo.submit(Callable { "$prefijo.$n".takeIf { abierto(it) } }) }
+            val ip = pruebas.firstNotNullOfOrNull { runCatching { it.get() }.getOrNull() } ?: return null
+            return "http://$ip:$PUERTO_HTTP".also { direccion = it }
+        } finally {
+            grupo.shutdownNow()
+        }
+    }
+
+    private fun abierto(ip: String): Boolean = runCatching {
+        Socket().use { it.connect(InetSocketAddress(ip, PUERTO_HTTP), 400) }
+    }.isSuccess
 
     private fun llamar(base: String, ruta: String, cuerpo: JSONObject?): JSONObject {
         val peticion = Request.Builder().url(base + ruta)
@@ -96,6 +124,7 @@ class Notebook {
 
     companion object {
         private const val PUERTO_DESCUBRIR = 47800
+        private const val PUERTO_HTTP = 47801
         private const val NO_ENCONTRADA = "No encuentro la notebook en la red. Tiene que estar encendida, " +
             "con Jarvis abierto y en la misma red Wi-Fi que el celular."
         private val JSON = "application/json".toMediaType()

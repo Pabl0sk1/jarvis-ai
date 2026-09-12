@@ -263,12 +263,14 @@ class Herramientas(
     fun ejecutar(nombre: String, argumentos: JSONObject): String {
         val herramienta = porNombre[nombre] ?: return "Error: no existe la herramienta $nombre."
         Log.i(TAG, "Herramienta $nombre($argumentos)")
-        return try {
+        val resultado = try {
             herramienta.funcion(argumentos)
         } catch (error: Exception) {  // el cerebro recibe el error y se lo explica al usuario
             Log.w(TAG, "La herramienta $nombre falló", error)
             "Error al ejecutar $nombre: ${error.message}"
         }
+        Log.i(TAG, "Resultado de $nombre: ${resultado.take(300)}")
+        return resultado
     }
 
     // --- Implementaciones ---------------------------------------------------------

@@ -1,6 +1,6 @@
 @echo off
-chcp 65001 >nul
 rem Compila la app de Jarvis y la instala en el celular SIN borrar sus datos.
+rem (Sin tildes a proposito: cmd lee mal los .bat con caracteres especiales.)
 setlocal
 set "ADB=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
 cd /d "%~dp0android"
@@ -8,23 +8,23 @@ cd /d "%~dp0android"
 echo Compilando la app...
 call gradlew.bat assembleRelease --console=plain -q
 if errorlevel 1 (
-    echo La compilación falló.
+    echo La compilacion fallo.
     exit /b 1
 )
 rem Libera la memoria que Gradle deja ocupada
 call gradlew.bat --stop >nul 2>&1
 
 echo.
-echo Conecta el celular (USB o depuración inalámbrica), desbloquéalo y acepta los avisos...
+echo Conecta el celular (USB o depuracion inalambrica), desbloquealo y acepta los avisos...
 "%ADB%" wait-for-device
-echo Instalando: acepta en el celular el aviso de Xiaomi "Instalar vía USB".
+echo Instalando: acepta en el celular el aviso de Xiaomi "Instalar via USB".
 "%ADB%" install -r app\build\outputs\apk\release\app-release.apk
 if errorlevel 1 (
     echo No se pudo instalar. Si dice INSTALL_FAILED_UPDATE_INCOMPATIBLE, la app instalada
-    echo está firmada con otra clave: respalda la memoria, desinstálala y vuelve a ejecutar esto.
+    echo esta firmada con otra clave: respalda la memoria, desinstalala y vuelve a ejecutar esto.
     exit /b 1
 )
-rem HyperOS desactiva al actualizar el inicio automático y "mostrar sobre otras apps": se reactivan
+rem HyperOS desactiva al actualizar el inicio automatico y "mostrar sobre otras apps": se reactivan
 "%ADB%" shell appops set com.pabl0sk1.jarvis 10008 allow >nul 2>&1
 "%ADB%" shell appops set com.pabl0sk1.jarvis SYSTEM_ALERT_WINDOW allow >nul 2>&1
 "%ADB%" shell dumpsys deviceidle whitelist +com.pabl0sk1.jarvis >nul 2>&1

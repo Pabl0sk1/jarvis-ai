@@ -49,25 +49,31 @@ class TeleSamsung(contexto: Context) {
         return if (emparejada()) "Tele emparejada." else "La tele no dio permiso."
     }
 
+    // Las órdenes van directas por el WebSocket, sin preguntar antes por REST si está encendida:
+    // esa consulta a veces tardaba y hacía creer que la tele estaba apagada. Si conecta, está encendida.
     fun controlar(accion: String, veces: Int = 1): String {
         if (accion == "encender") return encender()
-        if (!encendida()) return NO_RESPONDE
-        if (accion == "apagar") {
-            pulsar("KEY_POWER", 1)
-            return "Tele apagada."
+        val tecla = if (accion == "apagar") "KEY_POWER" else TECLAS[accion] ?: return "No conozco la acción $accion."
+        return conTele {
+            pulsar(tecla, if (accion == "apagar") 1 else veces.coerceIn(1, 30))
+            if (accion == "apagar") "Tele apagada." else "Hecho."
         }
-        val tecla = TECLAS[accion] ?: return "No conozco la acción $accion."
-        pulsar(tecla, veces.coerceIn(1, 30))
-        return "Hecho."
     }
 
-    fun apps(): String {
-        if (!encendida()) return NO_RESPONDE
-        return listaDeApps().joinToString(", ") { it.second }.ifEmpty { "No pude leer las apps de la tele." }
+    fun apps(): String = conTele {
+        listaDeApps().joinToString(", ") { it.second }.ifEmpty { "No pude leer las apps de la tele." }
     }
 
-    fun abrirApp(app: String): String {
-        if (!encendida()) return "$NO_RESPONDE Si está apagada, hay que encenderla primero."
+    fun abrirApp(app: String): String = conTele { abrirAppConectada(app) }
+
+    /** Ejecuta la orden y convierte los fallos de conexión en una frase para el cerebro. */
+    private fun conTele(orden: () -> String): String = try {
+        orden()
+    } catch (error: IOException) {
+        if (!emparejada()) error.message ?: NO_RESPONDE else "$NO_RESPONDE (${error.message})"
+    }
+
+    private fun abrirAppConectada(app: String): String {
         val buscada = app.trim().lowercase()
         val instaladas = listaDeApps()
         val encontrada = instaladas.firstOrNull { it.second.lowercase().contains(buscada) }
@@ -194,7 +200,7 @@ class TeleSamsung(contexto: Context) {
         private val APPS_CONOCIDAS = mapOf("youtube" to "111299001912", "netflix" to "11101200001",
             "prime video" to "3201512006785", "spotify" to "3201606009684")
 
-        private val CLIENTE_REST = HTTP.newBuilder().callTimeout(2, TimeUnit.SECONDS).build()
+        private val CLIENTE_REST = HTTP.newBuilder().callTimeout(4, TimeUnit.SECONDS).build()
 
         // La tele usa un certificado propio (autofirmado): sólo este cliente lo acepta, y sólo se usa
         // para hablar con la tele de la red de casa

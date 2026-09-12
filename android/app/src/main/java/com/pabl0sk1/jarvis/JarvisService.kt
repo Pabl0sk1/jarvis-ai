@@ -209,6 +209,7 @@ class JarvisService : Service() {
             EstadoJarvis.cambiar(EstadoJarvis.Fase.ESCUCHANDO, "Te escucho, ${Idiomas.actual.tratamiento}")
             val texto = oido.escuchar() ?: return
             EstadoJarvis.anotar("Tú: $texto")
+            Log.i(TAG, "Tú: $texto")
             val i = Idiomas.actual
             if (normalizar(texto) in i.despedidas) {
                 voz.hablar(i.decir(i.despedida))
@@ -217,6 +218,7 @@ class JarvisService : Service() {
             EstadoJarvis.cambiar(EstadoJarvis.Fase.PENSANDO, "Pensando")
             val respuesta = cerebro.responder(texto)
             EstadoJarvis.anotar("Jarvis: $respuesta")
+            Log.i(TAG, "Jarvis: $respuesta")
             EstadoJarvis.cambiar(EstadoJarvis.Fase.HABLANDO, "Hablando")
             voz.hablar(respuesta)
         }
