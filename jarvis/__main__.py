@@ -50,10 +50,10 @@ def probar_voces(voz: Voz) -> None:
     print("\nPon la que más te guste en JARVIS_VOZ_ES / JARVIS_VOZ_EN dentro del archivo .env")
 
 
-def iniciar_servidor(herramientas: Herramientas, memoria: Memoria) -> None:
+def iniciar_servidor(herramientas: Herramientas, memoria: Memoria) -> bool:
     """Deja que la app del celular controle esta notebook y comparta la memoria (si hay clave)."""
     if not config.CLAVE_RED:
-        return
+        return False
     from .red import ip_local
     from .servidor import PUERTO_HTTP, Servidor
 
@@ -61,8 +61,9 @@ def iniciar_servidor(herramientas: Herramientas, memoria: Memoria) -> None:
         Servidor(herramientas, memoria).iniciar()
     except OSError as error:
         print(f"No pude abrir el servidor para el celular: {error}")
-        return
+        return False
     print(f"Servidor para el celular en {ip_local()}:{PUERTO_HTTP}")
+    return True
 
 
 def mostrar_dispositivos() -> None:
@@ -208,15 +209,16 @@ def main() -> None:
     herramientas = Herramientas(memoria, avisar)
     cerebro = Cerebro(herramientas, memoria)
     print(f"JARVIS · idioma: {idioma.actual().nombre} · cerebro: {cerebro.describir()}")
-    iniciar_servidor(herramientas, memoria)
+    servidor_activo = iniciar_servidor(herramientas, memoria)
     VigilanteEnergia(avisar).iniciar()  # cortes de luz
     iniciar_respaldo_diario()           # copia de seguridad de la memoria
 
     try:
         if args.servidor:
-            if not config.CLAVE_RED:
-                print("Falta JARVIS_CLAVE_RED en el .env: sin clave no arranco el servidor.")
-                return
+            if not servidor_activo:
+                # Código 2: servidor_jarvis.bat lo reintenta (p. ej. si ya había otro en marcha)
+                print("El servidor no está activo: falta JARVIS_CLAVE_RED en el .env o el puerto está ocupado.")
+                sys.exit(2)
             print("Sólo servidor: la app del celular ya puede controlar esta notebook. Ctrl+C para salir.")
             threading.Event().wait()
         elif args.texto:
