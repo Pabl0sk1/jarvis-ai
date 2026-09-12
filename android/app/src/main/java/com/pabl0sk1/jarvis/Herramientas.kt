@@ -73,11 +73,19 @@ class Herramientas(
         ),
         Herramienta(
             "reproducir_musica",
-            "Pone una canción, artista, álbum o lista de música.",
-            objeto("consulta" to texto("Qué poner, p. ej. 'AC/DC' o 'música para manejar'."),
-                "app" to enumeracion(listOf("spotify", "youtube music", "youtube", "cualquiera")),
+            "Pone y REPRODUCE directamente una canción, artista, álbum o tipo de música. Por defecto en " +
+                "YouTube (reproduce el primer vídeo que encuentra, no muestra la lista).",
+            objeto("consulta" to texto("Qué poner, p. ej. 'AC/DC' o 'música relajante'."),
+                "app" to enumeracion(listOf("youtube", "spotify", "youtube music")),
                 requeridos = listOf("consulta")),
             ::reproducirMusica,
+        ),
+        Herramienta(
+            "ver_video_youtube",
+            "Busca un vídeo en YouTube y lo REPRODUCE directamente (el primer resultado). Úsala cuando " +
+                "el usuario quiera ver o escuchar un vídeo, no para mostrarle la lista de resultados.",
+            objeto("consulta" to texto("Qué vídeo buscar."), requeridos = listOf("consulta")),
+            ::verVideoYoutube,
         ),
         Herramienta(
             "controlar_musica",
@@ -234,25 +242,45 @@ class Herramientas(
         val paquete = when (a.optString("app")) {
             "spotify" -> "com.spotify.music"
             "youtube music" -> "com.google.android.apps.youtube.music"
-            "youtube" -> "com.google.android.youtube"
-            else -> null
+            else -> return reproducirEnYoutube(consulta)  // por defecto, YouTube
         }
-        if (paquete == "com.google.android.youtube") {
-            contexto.startActivity(Intent(Intent.ACTION_SEARCH).setPackage(paquete)
-                .putExtra("query", consulta).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return "Buscando $consulta en YouTube."
-        }
+        // Spotify y YouTube Music empiezan a reproducir solos con "reproducir desde búsqueda"
         val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
             .putExtra(SearchManager.QUERY, consulta)
             .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .setPackage(paquete)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (paquete != null) intent.setPackage(paquete)
         return try {
             contexto.startActivity(intent)
             "Poniendo $consulta."
         } catch (e: ActivityNotFoundException) {
-            "No hay ninguna app de música que pueda poner $consulta."
+            "Esa app no está instalada. " + reproducirEnYoutube(consulta)
         }
+    }
+
+    private fun verVideoYoutube(a: JSONObject): String = reproducirEnYoutube(a.getString("consulta"))
+
+    /** Busca en YouTube y abre directamente el primer vídeo (así empieza a reproducirse). */
+    private fun reproducirEnYoutube(consulta: String): String {
+        val url = "https://www.youtube.com/results".toHttpUrl().newBuilder()
+            .addQueryParameter("search_query", consulta).build()
+        val html = HTTP.newCall(Request.Builder().url(url)
+            .header("User-Agent", AGENTE_ESCRITORIO)
+            .header("Accept-Language", "es-419,es;q=0.9")
+            .build()).execute().use { it.body?.string().orEmpty() }
+        // El primer resultado normal (videoRenderer); si YouTube cambia la página, cualquier vídeo
+        val id = Regex("\"videoRenderer\":\\{\"videoId\":\"([\\w-]{11})\"").find(html)?.groupValues?.get(1)
+            ?: Regex("\"videoId\":\"([\\w-]{11})\"").find(html)?.groupValues?.get(1)
+            ?: return "No encontré ningún vídeo de $consulta en YouTube."
+        val app = Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$id"))
+            .setPackage("com.google.android.youtube").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            contexto.startActivity(app)
+        } catch (e: ActivityNotFoundException) {
+            contexto.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$id"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        return "Reproduciendo en YouTube el primer vídeo de $consulta."
     }
 
     private fun controlarMusica(a: JSONObject): String {
@@ -311,6 +339,9 @@ class Herramientas(
         private const val TAG = "JarvisHerramientas"
         private const val AGENTE = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36"
+        // La página de resultados de YouTube de escritorio trae los vídeos en un JSON fácil de leer
+        private const val AGENTE_ESCRITORIO = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
 
         // Los modelos añaden fechas a las búsquedas y así no se encuentra nada; se quitan antes
         private val FECHAS = Regex(
