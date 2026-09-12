@@ -2,6 +2,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Properties
+import java.util.TimeZone
 
 plugins {
     id("com.android.application")
@@ -49,7 +50,11 @@ android {
         targetSdk = 35
         // Minutos desde 1970: sube solo en cada compilación, así cada versión es más nueva que la anterior
         versionCode = (System.currentTimeMillis() / 60_000).toInt()
-        versionName = "0.1-" + SimpleDateFormat("yyyyMMdd.HHmm").format(Date())
+        // Hora de Paraguay (UTC-3 todo el año). No se usa la zona de Java: el JDK 21.0.1 instalado
+        // tiene reglas horarias antiguas y restaba una hora.
+        versionName = "0.1-" + SimpleDateFormat("yyyyMMdd.HHmm").apply {
+            timeZone = TimeZone.getTimeZone("GMT-03:00")
+        }.format(Date())
 
         buildConfigField("String", "GEMINI_API_KEY", ajuste("GEMINI_API_KEY"))
         buildConfigField("String", "GROQ_API_KEY", ajuste("GROQ_API_KEY"))
