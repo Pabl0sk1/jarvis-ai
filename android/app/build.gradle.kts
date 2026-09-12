@@ -1,4 +1,7 @@
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -19,16 +22,34 @@ val env: Map<String, String> = File(rootDir.parentFile, ".env").takeIf { it.exis
 fun ajuste(nombre: String, defecto: String = "") =
     "\"" + (env[nombre]?.takeIf { it.isNotEmpty() } ?: defecto).replace("\"", "\\\"") + "\""
 
+// Clave de firma propia (android/firma.properties, fuera de git). Android sólo deja
+// actualizar la app sin borrar sus datos si siempre se firma con la misma clave.
+val firma = Properties().apply {
+    File(rootDir, "firma.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "com.pabl0sk1.jarvis"
     compileSdk = 35
+
+    signingConfigs {
+        if (firma.getProperty("storeFile") != null) {
+            create("jarvis") {
+                storeFile = file(firma.getProperty("storeFile"))
+                storePassword = firma.getProperty("storePassword")
+                keyAlias = firma.getProperty("keyAlias")
+                keyPassword = firma.getProperty("keyPassword")
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.pabl0sk1.jarvis"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        // Minutos desde 1970: sube solo en cada compilación, así cada versión es más nueva que la anterior
+        versionCode = (System.currentTimeMillis() / 60_000).toInt()
+        versionName = "0.1-" + SimpleDateFormat("yyyyMMdd.HHmm").format(Date())
 
         buildConfigField("String", "GEMINI_API_KEY", ajuste("GEMINI_API_KEY"))
         buildConfigField("String", "GROQ_API_KEY", ajuste("GROQ_API_KEY"))
@@ -50,9 +71,13 @@ android {
     }
 
     buildTypes {
+        val clave = signingConfigs.findByName("jarvis") ?: signingConfigs.getByName("debug")
+        debug {
+            signingConfig = clave
+        }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = clave
         }
     }
     compileOptions {

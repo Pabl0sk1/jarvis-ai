@@ -193,7 +193,7 @@ class JarvisService : Service() {
         val notificacion = Notification.Builder(this, CANAL)
             .setContentTitle("Jarvis")
             .setContentText("Escuchando «Hey Jarvis»")
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_notificacion)
             .setOngoing(true)
             .setContentIntent(abrir)
             .addAction(Notification.Action.Builder(null, "Detener", detener).build())

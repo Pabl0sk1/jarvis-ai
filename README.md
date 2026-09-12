@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo_completo.png" alt="Jarvis · AI Assistant" width="520"></p>
+
 # J.A.R.V.I.S. · Asistente personal por voz
 
 > *"Buenas noches, señor. Todos los sistemas en línea."*
@@ -147,14 +149,20 @@ La carpeta [`android/`](android) contiene Jarvis para el celular, para llevarlo 
 - Herramientas: búsqueda web, clima, temporizadores, memoria, abrir apps, **navegar con Google Maps**, **poner y controlar la música**, batería e idioma.
 - **Modo auto**: al conectarse por Bluetooth a la radio (`JARVIS_RADIO_AUTO`), te da la bienvenida, habla por los parlantes y responde más corto.
 
-**Compilar e instalar** (necesita el SDK de Android y Java 17 o superior):
+**Compilar, instalar y actualizar** (necesita el SDK de Android y Java 17 o superior). Con el celular conectado por USB y la depuración USB activada:
 
 ```powershell
-cd android
-.\gradlew.bat installDebug   # con el celular conectado por USB y la depuración USB activada
+actualizar_app.bat      # compila, espera al celular e instala SIN borrar los datos de la app
+respaldar_memoria.bat   # copia la memoria de Jarvis del celular a datos\memoria_celular.json
+restaurar_memoria.bat   # la devuelve al celular (p. ej. después de reinstalar)
 ```
 
-En Xiaomi/HyperOS, dale a la app batería sin restricciones, "Mostrar sobre otras apps" e "Inicio automático"; si no, el sistema la cierra.
+- **Actualizar no borra nada**: la memoria, los permisos y los ajustes se conservan, siempre que la app se firme con la **misma clave**.
+- **Clave de firma propia**: `android/firma.properties` indica dónde está la clave (`storeFile`) y su contraseña. **Nunca se sube a git.** Guarda una copia de los dos archivos fuera del PC: sin ellos no podrás actualizar la app y habría que reinstalarla. Para crear una clave nueva: `keytool -genkeypair -keystore jarvis-firma.jks -storetype PKCS12 -alias jarvis -keyalg RSA -keysize 2048 -validity 36500`.
+- **Desinstalar sí borra la memoria**: haz antes `respaldar_memoria.bat`.
+- **Logo e iconos**: `.venv\Scripts\python.exe android\generar_iconos.py` recorta el dibujo de `docs/logo_completo.png` y genera `docs/logo.svg`, `docs/logo_transparente.png` (sin fondo), `docs/logo_fondo_blanco.png` y todos los iconos de la app (escritorio con fondo blanco, monocromo para temas y notificación).
+
+En Xiaomi/HyperOS, dale a la app batería sin restricciones, "Mostrar sobre otras apps" e "Inicio automático"; si no, el sistema la cierra. Además, HyperOS pide confirmar en el celular cada instalación por USB.
 
 > Las claves de API quedan dentro del APK: es una app personal, no la compartas.
 

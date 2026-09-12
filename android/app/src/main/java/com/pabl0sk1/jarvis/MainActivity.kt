@@ -11,7 +11,11 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,7 +61,11 @@ class MainActivity : ComponentActivity() {
         // Con targetSdk 35 la app ocupa toda la pantalla: se deja sitio a la barra de estado y de navegación
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("J.A.R.V.I.S.", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Image(painterResource(R.drawable.logo_jarvis), contentDescription = null,
+                    modifier = Modifier.size(56.dp))
+                Text("J.A.R.V.I.S.", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            }
             Text(estado, color = MaterialTheme.colorScheme.primary)
             if (bluetooth.isNotEmpty()) Text("Bluetooth conectado: $bluetooth")
 
