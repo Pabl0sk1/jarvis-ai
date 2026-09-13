@@ -42,6 +42,7 @@ class Servidor:
             while True:
                 datos, origen = s.recvfrom(256)
                 if datos.strip() == b"JARVIS?":
+                    log.info("El celular me busca desde %s", origen[0])
                     respuesta = {"puerto": PUERTO_HTTP, "nombre": socket.gethostname()}
                     s.sendto(json.dumps(respuesta).encode("utf-8"), origen)
 
@@ -53,7 +54,10 @@ class Servidor:
                 pass
 
             def _autorizado(self) -> bool:
-                return hmac.compare_digest(self.headers.get("X-Jarvis-Clave", ""), config.CLAVE_RED)
+                autorizado = hmac.compare_digest(self.headers.get("X-Jarvis-Clave", ""), config.CLAVE_RED)
+                log.info("%s %s desde %s%s", self.command, self.path, self.client_address[0],
+                         "" if autorizado else " (clave incorrecta)")
+                return autorizado
 
             def _responder(self, codigo: int, datos: dict) -> None:
                 cuerpo = json.dumps(datos, ensure_ascii=False).encode("utf-8")
@@ -87,6 +91,7 @@ class Servidor:
                         return self._responder(403, {"error": f"{nombre} no está permitida"})
                     log.info("Orden del celular: %s(%s)", nombre, cuerpo.get("argumentos"))
                     resultado = servidor._herramientas.ejecutar(nombre, cuerpo.get("argumentos") or {})
+                    log.info("Resultado: %s", resultado[:200])
                     return self._responder(200, {"resultado": resultado})
                 if self.path == "/memoria":
                     anadidos = servidor._memoria.fusionar(cuerpo.get("datos") or [])

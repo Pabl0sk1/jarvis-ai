@@ -196,7 +196,10 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true", help="mostrar más detalles")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO if args.debug else logging.WARNING,
-                        format="[%(levelname)s] %(name)s: %(message)s")
+                        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S")
+    if args.servidor:
+        # Cada búsqueda y orden del celular queda en el registro, para poder revisarlo sin cable
+        logging.getLogger("jarvis.servidor").setLevel(logging.INFO)
     if args.idioma:
         idioma.cambiar(args.idioma)
 
