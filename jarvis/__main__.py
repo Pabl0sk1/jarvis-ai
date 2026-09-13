@@ -15,6 +15,7 @@ import logging
 import re
 import sys
 import threading
+import time
 import unicodedata
 
 from . import config, idioma
@@ -175,7 +176,13 @@ def conversar(mic, transcriptor, cerebro: Cerebro, voz: Voz) -> None:
 
 
 def main() -> None:
-    sys.stdout.reconfigure(encoding="utf-8")
+    if sys.stdout is None:
+        # pythonw (la tarea programada, sin ventana): lo que se mostraría va a datos/jarvis.log
+        config.DIR_DATOS.mkdir(parents=True, exist_ok=True)
+        sys.stdout = sys.stderr = open(config.DIR_DATOS / "jarvis.log", "a", encoding="utf-8", buffering=1)
+        print(f"\n=== Jarvis arrancado el {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
+    else:
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="jarvis", description="Asistente personal por voz.")
     parser.add_argument("--texto", action="store_true", help="chatear por teclado en vez de por voz")
     parser.add_argument("--hablar", action="store_true", help="en modo texto, responder también en voz alta")
